@@ -1,2 +1,10 @@
 .DS_Store
-*_preview.html
+node_modules/
+dist/
+build/
+coverage/
+__pycache__/
+.env
+.env.local
+npm-debug.log*
+yarn-error.log*

@@ -1,0 +1,12 @@
+{
+  "name": "zai-agent-audited-compute",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/dev.js",
+    "dev:api": "node apps/api/src/server.js",
+    "dev:web": "node apps/web/server.js",
+    "check": "node --check apps/api/src/server.js && node --check apps/web/server.js && node --check tools/dev.js"
+  }
+}
