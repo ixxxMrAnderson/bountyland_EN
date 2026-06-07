@@ -1,0 +1,6 @@
+{
+  "name": "Compute Outsourcing Platform",
+  "description": "An agent-audited compute outsourcing platform with integrated simulated Cobo Wallet controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
