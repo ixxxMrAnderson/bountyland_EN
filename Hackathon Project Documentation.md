@@ -182,60 +182,69 @@
 > 任务链下编排, Agent 链下执行, 评估链下进行, 资金链上托管, 结算链上分发.
 
 ### 5.2 架构图
-```mermaid
-flowchart LR
-    %% 节点定义与样式
-    C[Project Owner]
-    FE[Frontend]
-    BE[Backend Orchestrator]
-    SC[RewardPool Contract]
-    V[Validators]
-    AI[AI Audit Reference]
-    SE[Scoring & Weighting Engine]
 
-    subgraph AG [Agents 审计节点群]
-        A1[Agent A: Static Analyzer]
-        A2[Agent B: LLM Auditor]
-        A3[Agent C: Human Expert]
-        AN[Agent N]
-    end
 
-    %% 核心业务核心流
-    C -->|1. 任务请求| FE
-    FE -->|2. 调度执行| BE
-    C -.->|充值资金| SC
 
-    %% 任务分发与提交
-    BE ==>|3. 分发任务| AG
-    AG ==>|4. 提交 Outputs| BE
 
-    %% 评估与权重计算
-    BE -->|5. 触发评估| V
-    BE -->|5. 请求基准| AI
-    
-    V -->|评分| SE
-    AI -->|参考分| SE
-    BE -->|控制指令| SE
-
-    %% 结算与分发
-    SE -->|6. Settlement| SC
-    SC -.->|7. 比例分发 reward| AG
-    
-    %% 前端反馈
-    SE -->|8. 更新看板| FE
-
-    %% 样式美化（GitHub 亮暗主题自适应）
-    classDef highlight fill:#eff6ff,stroke:#2563eb,stroke-width:2px;
-    classDef contract fill:#fef2f2,stroke:#dc2626,stroke-width:2px;
-    class BE,SE highlight;
-    class SC contract;
-```
-
-```
 
 
 ### 5.3 关键流程 (Sequence)
 
 
 
+### 5.4 评分公式 (Demo)
+
+### 5.4 评分与奖励分配算法 (Algorithm)
+
+系统采用动态权重清算机制。首先根据人工验证节点（Validator）与 AI 节点的评分差异（Delta）及验证者声誉（Trust），计算出最终的结算得分（FinalScore），再按比例分发奖励。
+
+#### 1. 核心清算逻辑 (Pseudocode)
+
+```python
+# 计算人工评分与 AI 评分的绝对绝对绝对绝对误差
+delta = abs(ValidatorScore - AIScore)
+
+# 根据当前验证者的声誉值计算信任度权重
+trust = ValidatorReputation / MAX_REP
+
+# 动态权重清算分支
+if delta <= 20:      
+    FinalScore = ValidatorScore
+elif delta <= 40:    
+    FinalScore = trust * ValidatorScore + (1 - trust) * AIScore
+else:                
+    FinalScore = 0.25 * ValidatorScore + 0.75 * AIScore
+```
+
+#### 2. 奖励分发数学公式 (Mathematical Formula)
+
+单个审计节点 $i$ 最终获得的奖励金计算公式如下：
+
+$$ Reward_i = TotalReward \times \frac{FinalScore_i}{\sum_{j=1}^{N} FinalScore_j} $$
+
+
+(参考 Bittensor 加权思想, Demo 简化版, 未来可替换.)
+
+---
+## 6. 商业模式与市场机会 (Why it can be a business)
+
+###6.1 客户 (谁会付钱)
+Web3 项目方 / 协议团队: 上线前必审计, 已有付费习惯
+DAO 基金会 / 协议治理: 持续监控预算
+DeFi / 桥 / 跨链项目: 风险高, 付费意愿强
+交易所 / 钱包: 合作集成
+传统企业 (链改): 私有任务 / TEE 需求
+
+###6.2 商业模式 (Post-Hackathon)
+平台抽佣: 每次任务 reward 抽 5-10%
+Premium Validators / Agents: 高级 reputation 排名订阅
+Enterprise API: 企业客户 SDK / CI/CD 集成
+Insurance + Audit 组合服务: 长期
+
+###6.3 市场体量 (公开行业经验, 避免编造数字)
+Web3 安全市场: 公开报告 (如慢雾、CertiK、Grand View 等) 长期把 Web3 安全行业描述为 数亿到数十亿美元年规模 的市场, 且仍在高速增长.
+智能合约审计细分: 是其中最大、最刚需的子市场.
+Bug Bounty 子市场: Immunefi 等平台历史累计支付的 bug bounty 总额已达 数亿美元 量级, 验证了"安全任务有付费能力".
+
+出处: 这些是行业广泛引用的"方向性"数据, 我们在正式 pitch 时会附上你确认过的具体报告链接.
   
