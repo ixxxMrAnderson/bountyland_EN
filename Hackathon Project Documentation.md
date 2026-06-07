@@ -182,60 +182,47 @@
 > 任务链下编排, Agent 链下执行, 评估链下进行, 资金链上托管, 结算链上分发.
 
 ### 5.2 架构图
-
 ```mermaid
 flowchart LR
     C[Project Owner] --> FE[Frontend]
     FE --> BE[Backend Orchestrator]
     C -->|deposit| SC[RewardPool Contract]
 
+    %% 任务下发
     BE --> A1[Agent A: Static Analyzer]
     BE --> A2[Agent B: LLM Auditor]
     BE --> A3[Agent C: Human Expert]
     BE --> AN[Agent N]
 
-    A1 --> BE
-    A2 --> BE
-    A3 --> BE
-    AN --> BE
+    %% 结果返回
+    A1 -.-> BE
+    A2 -.-> BE
+    A3 -.-> BE
+    AN -.-> BE
 
+    %% 多方评估
     BE --> V[Validators]
     BE --> AI[AI Audit Reference]
 
+    %% 权重清算
     V --> SE[Scoring & Weighting Engine]
     AI --> SE
     BE --> SE
+    
+    %% 资金结算
     SE --> SC
     SC -->|distribute| A1
     SC -->|distribute| A2
     SC -->|distribute| A3
     SC -->|distribute| AN
+    
+    %% 状态更新
     SE --> FE
+```
+
 
 ### 5.3 关键流程 (Sequence)
 
- # AI 审计业务流程时序图
 
-```mermaid
-sequenceDiagram
-    participant C as Project Owner
-    participant FE as Frontend
-    participant BE as Backend
-    participant A as Agents
-    participant V as Validators
-    participant AI as AI Audit
-    participant SC as RewardPool
 
-    C->>FE: 提交审计任务 + 设置 reward
-    C->>SC: 充值到 escrow
-    BE->>A: 分发任务
-    A->>BE: 提交 output (URI + hash)
-    BE->>V: 评估 outputs
-    V->>BE: 提交 score
-    BE->>AI: 请求 reference score
-    AI->>BE: 返回 AI score
-    BE->>SC: 提交最终 settlement 指令
-    SC->>A: 按比例分发 reward
-    BE->>FE: 更新 leaderboard
-```
   
