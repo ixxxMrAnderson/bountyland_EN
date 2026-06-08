@@ -9,6 +9,7 @@ contracts/cache/
 contracts/deployments/
 coverage/
 __pycache__/
+.tools/
 .env
 .env.local
 npm-debug.log*
