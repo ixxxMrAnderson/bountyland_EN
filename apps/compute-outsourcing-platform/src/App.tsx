@@ -100,6 +100,7 @@ export default function App() {
   }>>([]);
   const [strategyInput, setStrategyInput] = useState('');
   const [strategySelections, setStrategySelections] = useState<Record<string, string>>({});
+  const [rewardPoolInput, setRewardPoolInput] = useState('');
   const [methodologyAccepted, setMethodologyAccepted] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typingStatusIndex, setTypingStatusIndex] = useState(0);
@@ -208,6 +209,37 @@ export default function App() {
     };
   };
 
+  const getRewardPoolAmount = () => {
+    const amount = Number(rewardPoolInput);
+    return Number.isFinite(amount) && amount > 0 ? amount : null;
+  };
+
+  const canGenerateComputationOrder = () => (
+    areAllStrategyQuestionsAnswered() && getRewardPoolAmount() !== null
+  );
+
+  const applyRewardPoolToDraft = (draft: AgentFlowDraft, rewardPoolEth: number): AgentFlowDraft => {
+    const taskInfo = {
+      ...draft.taskInfo,
+      budgetEth: rewardPoolEth,
+      depositEth: rewardPoolEth
+    };
+
+    return {
+      ...draft,
+      taskInfo,
+      finalOrderJson: {
+        ...draft.finalOrderJson,
+        taskInfo
+      },
+      trace: draft.trace.map((step) => (
+        step.id === 'task-info'
+          ? { ...step, summary: `Created task id ${taskInfo.taskId}, reward pool ${taskInfo.budgetEth} ETH.` }
+          : step
+      ))
+    };
+  };
+
   // Create Task conversational flow dispatch
   const handleChatPromptSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,6 +248,7 @@ export default function App() {
     const userText = userInput;
     setUserInput('');
     setStrategySelections({});
+    setRewardPoolInput('');
     setMethodologyAccepted(false);
 
     // 1. Post User prompt in messages
@@ -226,6 +259,9 @@ export default function App() {
     // 2. Generate customized criteria option sets
     setTimeout(async () => {
       const draft = await runInitialAgentFlow(userText);
+      if (draft.taskInfo.budgetEth > 0) {
+        setRewardPoolInput(String(draft.taskInfo.budgetEth));
+      }
       const strategyResponse = await requestZAiStrategyQuestions(draft, locale, 'methodology');
       const modelDraft = applyModelInferredSpec(draft, strategyResponse.inferredSpec);
       const draftWithStrategy: AgentFlowDraft = {
@@ -297,8 +333,8 @@ export default function App() {
       {
         sender: 'agent',
         text: locale === 'zh'
-          ? '好的。下面请完成 3 个策略选择，我会据此生成计算订单。'
-          : 'Great. Please answer the 3 strategy questions below, then I will generate the computation order.',
+          ? `好的。下面请完成 ${mergedStrategyResponse.strategyQuestions.length} 个策略选择，并填写任务托管 Reward Pool 金额；我会据此生成计算订单。`
+          : `Great. Please answer the ${mergedStrategyResponse.strategyQuestions.length} strategy questions below and enter the task escrow Reward Pool amount; then I will generate the computation order.`,
         flowStep: 'strategy',
         criteriaOptions: draftWithStrategy.scoringCriteria.criteriaOptions,
         agentFlowDraft: draftWithStrategy,
@@ -315,6 +351,7 @@ export default function App() {
     const userText = strategyInput;
     setStrategyInput('');
     setStrategySelections({});
+    setRewardPoolInput('');
     setMethodologyAccepted(false);
     setChatMessages((prev) => [...prev, { sender: 'user', text: userText }]);
     setIsTyping(true);
@@ -354,8 +391,22 @@ export default function App() {
 
   // User selects an option inside conversational cards
   const handleSelectCriteriaOption = (option: CriteriaOption) => {
-    const finalizedDraft = agentFlowDraft
+    const rewardPoolAmount = getRewardPoolAmount();
+    if (rewardPoolAmount === null) {
+      triggerAlarm(
+        'alert',
+        locale === 'zh'
+          ? '请先填写任务托管 Reward Pool 金额。'
+          : 'Please enter the task escrow Reward Pool amount first.'
+      );
+      return;
+    }
+
+    const finalizedDraftBase = agentFlowDraft
       ? finalizeAgentFlowWithCriteria(agentFlowDraft, option, strategySelections, agentFlowDraft.strategyResponse)
+      : null;
+    const finalizedDraft = finalizedDraftBase
+      ? applyRewardPoolToDraft(finalizedDraftBase, rewardPoolAmount)
       : null;
     if (finalizedDraft) {
       setAgentFlowDraft(finalizedDraft);
@@ -370,8 +421,8 @@ export default function App() {
       ));
     });
 
-    const enMeSelect = `Confirm z.ai validator strategy: ${option.name}`;
-    const zhMeSelect = `确认 z.ai 生成的 validator 验收策略`;
+    const enMeSelect = `Confirm z.ai validator strategy and reward pool: ${rewardPoolAmount} ETH`;
+    const zhMeSelect = `确认 z.ai 生成的 validator 验收策略，托管 Reward Pool 为 ${rewardPoolAmount} ETH`;
 
     setChatMessages((prev) => [
       ...prev,
@@ -383,12 +434,12 @@ export default function App() {
 
     // 2. Build computation order preview
     setTimeout(() => {
-      const reward = 0.120;
-      const deposit = 0.120;
+      const reward = rewardPoolAmount;
+      const deposit = rewardPoolAmount;
       const passScore = option.id.includes('correctness') ? 80 : 72;
 
-      const enAgentText = `Excellent choice. I compiled your request into a ready-to-sign Smart Contract Computation Order with budget deposit requirements. Review the Pact and sign to deploy the task on-chain:`;
-      const zhAgentText = `明智的选择。我已经将您的需求集成一份已就绪的“多签智能合约计算订单”，该订单附带了预算托管代扣要求。请预览契约详情，然后签名将其安全上链发布：`;
+      const enAgentText = `Excellent choice. I compiled your request into a ready-to-sign Smart Contract Computation Order with an explicit ${rewardPoolAmount} ETH escrow Reward Pool. Review the Pact and sign to deploy the task on-chain:`;
+      const zhAgentText = `明智的选择。我已经将您的需求集成一份已就绪的“多签智能合约计算订单”，并明确设置托管 Reward Pool 为 ${rewardPoolAmount} ETH。请预览契约详情，然后签名将其安全上链发布：`;
 
       const enSumText = "Generate custom data complying with chosen metrics. Miner submissions are scored by AI reference review plus human validators.";
       const zhSumText = "生成符合指定数据规范的高质量算力数据集。miner 提交由 AI 参考评分和人工 validator 共同打分。";
@@ -441,6 +492,15 @@ export default function App() {
       );
       return;
     }
+    if (getRewardPoolAmount() === null) {
+      triggerAlarm(
+        'alert',
+        locale === 'zh'
+          ? '请填写一个大于 0 的任务托管 Reward Pool 金额。'
+          : 'Please enter a Reward Pool amount greater than 0.'
+      );
+      return;
+    }
 
     const recommendedCriteria = agentFlowDraft?.scoringCriteria.criteriaOptions[0];
     if (!recommendedCriteria) {
@@ -488,8 +548,6 @@ export default function App() {
       };
     }).filter((choice) => Boolean(choice.answer));
   };
-
-  const stripLeadingListNumber = (text: string) => text.replace(/^\s*\d+[\).\s、-]+\s*/, '');
 
   // User clicks "Secure Deposit & Create Task"
   const handleTriggerCoboPactApproval = () => {
@@ -1090,15 +1148,6 @@ export default function App() {
                                         </p>
                                       </div>
 
-                                      <div className="space-y-1.5">
-                                        {(msg.strategyResponse.scoringMethodology.methodologySteps || []).map((step, stepIndex) => (
-                                          <div key={stepIndex} className="flex gap-2 text-[10px] text-slate-300 leading-relaxed">
-                                            <span className="text-brand-cyan font-mono shrink-0">{stepIndex + 1}.</span>
-                                            <span>{stripLeadingListNumber(step)}</span>
-                                          </div>
-                                        ))}
-                                      </div>
-
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                         {(msg.strategyResponse.scoringMethodology.scoringRubric || []).map((item) => (
                                           <div key={item.dimension} className="rounded border border-slate-800 bg-slate-950 p-2">
@@ -1208,21 +1257,55 @@ export default function App() {
                               )}
 
                               {msg.flowStep === 'strategy' && index === getLatestStrategyMessageIndex() && (
+                                <div className="rounded-lg bg-slate-950 border border-slate-800 p-3 space-y-2">
+                                  <label className="flex items-center gap-1.5 text-[10px] text-white font-bold">
+                                    <Coins className="w-3.5 h-3.5 text-brand-cyan" />
+                                    {locale === 'zh' ? '任务托管 Reward Pool 金额' : 'Task Escrow Reward Pool'}
+                                  </label>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.001"
+                                      inputMode="decimal"
+                                      value={rewardPoolInput}
+                                      disabled={stage !== 'options' || isTyping}
+                                      onChange={(event) => setRewardPoolInput(event.target.value)}
+                                      placeholder={locale === 'zh' ? '例如 0.01' : 'e.g. 0.01'}
+                                      className="min-w-0 flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand-cyan/60 disabled:text-slate-600"
+                                    />
+                                    <span className="shrink-0 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-[11px] text-slate-300 font-mono">
+                                      ETH
+                                    </span>
+                                  </div>
+                                  <p className="text-[9px] text-slate-500 leading-relaxed">
+                                    {locale === 'zh'
+                                      ? '这笔钱是 miner/validator 可分配的托管奖池，不是 gas fee；如果所有 miner 提交都低于 threshold，大部分会按退款规则退回。'
+                                      : 'This is the escrowed reward pool for miners/validators, not gas. If all miner submissions fall below threshold, most of it follows the refund rule.'}
+                                  </p>
+                                </div>
+                              )}
+
+                              {msg.flowStep === 'strategy' && index === getLatestStrategyMessageIndex() && (
                                 <button
                                   type="button"
-                                  disabled={stage !== 'options' || isTyping || !areAllStrategyQuestionsAnswered()}
+                                  disabled={stage !== 'options' || isTyping || !canGenerateComputationOrder()}
                                   onClick={handleConfirmAgentStrategy}
                                   className={`w-full font-bold text-[11px] py-2.5 rounded-lg transition flex items-center justify-center gap-1.5 ${
-                                    stage === 'options' && !isTyping && areAllStrategyQuestionsAnswered()
+                                    stage === 'options' && !isTyping && canGenerateComputationOrder()
                                       ? 'bg-brand-indigo hover:bg-brand-indigo/80 text-white cursor-pointer'
                                       : 'bg-slate-950 text-slate-650 cursor-not-allowed'
                                   }`}
                                 >
-                                  {areAllStrategyQuestionsAnswered()
+                                  {canGenerateComputationOrder()
                                     ? (locale === 'zh' ? '确认策略并生成计算订单' : 'Confirm strategy and generate order')
-                                    : (locale === 'zh'
-                                      ? `请先完成策略选择 ${getStrategySelectionProgress().answered}/${getStrategySelectionProgress().total}`
-                                      : `Answer strategy questions ${getStrategySelectionProgress().answered}/${getStrategySelectionProgress().total}`)}
+                                    : !areAllStrategyQuestionsAnswered()
+                                      ? (locale === 'zh'
+                                        ? `请先完成策略选择 ${getStrategySelectionProgress().answered}/${getStrategySelectionProgress().total}`
+                                        : `Answer strategy questions ${getStrategySelectionProgress().answered}/${getStrategySelectionProgress().total}`)
+                                      : (locale === 'zh'
+                                        ? '请填写 Reward Pool 金额'
+                                        : 'Enter Reward Pool amount')}
                                   <ArrowRight className="w-3.5 h-3.5" />
                                 </button>
                               )}
@@ -1238,8 +1321,9 @@ export default function App() {
 
                               <div className="grid grid-cols-2 gap-3.5 text-xs text-slate-400 font-mono">
                                 <div className="space-y-0.5">
-                                  <span>{locale === 'zh' ? '多签托管预算:' : 'Deposit Balance:'}</span>
+                                  <span>{locale === 'zh' ? '托管 Reward Pool:' : 'Escrowed Reward Pool:'}</span>
                                   <span className="block font-bold text-white text-sm">{msg.orderPreview.deposit} ETH</span>
+                                  <span className="block text-[9px] text-slate-600">{locale === 'zh' ? '非 gas fee' : 'not gas'}</span>
                                 </div>
                                 <div className="space-y-0.5">
                                   <span>{locale === 'zh' ? '合格判定标准线:' : 'Validator Rule Line:'}</span>
@@ -1355,7 +1439,7 @@ export default function App() {
                                     {locale === 'zh' ? '查看最终 Agent JSON' : 'View final agent JSON'}
                                   </summary>
                                   <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-[9px] text-slate-400">
-                                    <div><span className="text-slate-200 font-semibold">taskInfo</span>: {locale === 'zh' ? '订单标题、预算、押金和创建者字段。' : 'Order title, budget, deposit, and creator fields.'}</div>
+                                    <div><span className="text-slate-200 font-semibold">taskInfo</span>: {locale === 'zh' ? '订单标题、用户明确填写的 reward pool / deposit 和创建者字段。' : 'Order title, user-entered reward pool / deposit, and creator fields.'}</div>
                                     <div><span className="text-slate-200 font-semibold">userRequirements</span>: {locale === 'zh' ? '模型从用户自然语言中推断出的任务目的、详细要求和输出格式。' : 'Task purpose, requirements, and output format inferred from the user prompt.'}</div>
                                     <div><span className="text-slate-200 font-semibold">scoringData</span>: {locale === 'zh' ? 'validator 用来打分的规则、权重和通过线。' : 'Rules, weights, and pass line used by validators.'}</div>
                                     <div><span className="text-slate-200 font-semibold">settlementPolicy</span>: {locale === 'zh' ? 'miner 获奖阈值、排名分成、validator 奖励和退款规则。' : 'Miner threshold, ranking payouts, validator pool, and refund rule.'}</div>

@@ -113,8 +113,8 @@ function extractTaskInfo(rawUserInput: string): TaskInfoFields {
     taskId: `task-${generateHash('').slice(0, 8)}`,
     creatorId: 'mock-user-zai-demo',
     title: inferTitle(rawUserInput, count),
-    budgetEth: budgetMatch ? Number(budgetMatch[1]) : 0.12,
-    depositEth: budgetMatch ? Number(budgetMatch[1]) : 0.12
+    budgetEth: budgetMatch ? Number(budgetMatch[1]) : 0,
+    depositEth: budgetMatch ? Number(budgetMatch[1]) : 0
   };
 }
 

@@ -139,12 +139,12 @@ function buildAgentPrompt(
       instruction: [
         'Use only userMessage as task input.',
         'Infer taskInfo, userRequirements, and scoringCriteria yourself.',
-        'Produce a high-level scoringMethodology for evaluating miner task results. It should read like a helpful chatbot answer and include methodology steps, a weighted rubric, and compact citations.',
-        'methodologySteps items must not include leading list numbers like "1." because the UI numbers them.',
+        'Produce a high-level scoringMethodology for evaluating miner task results. Focus on a weighted rubric. Each rubric item must explain how validators should detect or verify that dimension in practice.',
+        'Do not include internal planning steps or chain-of-thought. Set methodologySteps to [] unless there are essential public audit notes.',
         'Do not ask strategy questions yet. The user must approve the methodology first.',
         'Return compact JSON only. No markdown.'
       ],
-      returnShape: 'Return keys: mode, model, inferredSpec, scoringMethodology, agentReasoningSummary. scoringMethodology={title,summary,methodologySteps[],scoringRubric[{dimension,weight,description}],citations[{label,source,reason}]}. inferredSpec needs taskInfo{title,budgetEth,depositEth}, userRequirements{purpose,detailedRequirements,outputFormat,newRequirements,priority}, scoringCriteria{contentAccuracy{score,rules},formatAccuracy{score,rules},aiThresholdLine}.',
+      returnShape: 'Return keys: mode, model, inferredSpec, scoringMethodology, agentReasoningSummary. scoringMethodology={title,summary,methodologySteps[],scoringRubric[{dimension,weight,description}],citations[{label,source,reason}]}. Prefer methodologySteps=[]. scoringRubric.description must contain detailed detection procedures. inferredSpec needs taskInfo{title,budgetEth,depositEth}, userRequirements{purpose,detailedRequirements,outputFormat,newRequirements,priority}, scoringCriteria{contentAccuracy{score,rules},formatAccuracy{score,rules},aiThresholdLine}.',
       userMessage: draft.rawUserInput
     });
   }
@@ -423,43 +423,39 @@ function createFallbackStrategyResponse(
     mode: 'mock',
     model: 'z.ai-spec-agent-mock-v0',
     scoringMethodology: {
-      title: zh ? '数据集验收打分方法论' : 'Dataset Evaluation Methodology',
+      title: zh ? '金融多轮推理 QA 数据集验收打分方案' : 'Financial Multi-Step Reasoning QA Dataset Evaluation Plan',
       summary: zh
-        ? '先确认数据集是否满足用户目标，再分别评估内容正确性、格式可解析性、样本覆盖度和可复核证据。'
-        : 'Validate whether the dataset satisfies the user objective, then score content correctness, format parseability, sample coverage, and review evidence.',
-      methodologySteps: zh
-        ? [
-          '将用户自然语言需求转成可检查的任务目标和输出 schema。',
-          '抽样检查 miner 产出的样本是否真实覆盖核心场景和边界场景。',
-          '使用 validator rubric 给每个维度打分，并保留证据说明。',
-          '用 AI + 人工共同评分 threshold 判断是否进入结算或触发大部分 deposit 退回。'
-        ]
-        : [
-          'Convert the natural-language task into checkable goals and output schema.',
-          'Sample miner outputs for core cases and boundary cases.',
-          'Score each rubric dimension with validator evidence.',
-          'Use the combined AI + human validator threshold to decide settlement or deposit refund.'
-        ],
+        ? '针对“500 个多轮演算法推导的金融商业推演逻辑基准问答数据集”，验收重点不是只看题目数量，而是检查每条 QA 是否具备可验证的金融情境、连续推理链、标准答案、难度标签和可用于大语言模型强化微调的结构化质量。'
+        : 'For a 500-item financial business reasoning QA benchmark, validation should check not only item count, but whether each QA item has a verifiable financial scenario, multi-step reasoning chain, standard answer, difficulty tags, and structure suitable for LLM fine-tuning.',
+      methodologySteps: [],
       scoringRubric: [
         {
           dimension: zh ? '内容正确性' : 'Content correctness',
-          weight: 40,
-          description: zh ? '样本答案、解释和标签是否满足任务目的。' : 'Whether samples, answers, explanations, and labels satisfy the task purpose.'
+          weight: 35,
+          description: zh
+            ? '抽样核对题目中的金融变量、利率、现金流、折现、杠杆、利润率、库存或商业假设是否自洽；人工 validator 复算标准答案，AI reference review 检查推理链中是否存在跳步、错误公式、单位混乱或与题干矛盾的结论。对每条样本至少检查 question、reasoning、answer 三者是否闭环。'
+            : 'Sample-check financial variables, interest rates, cash flows, discounting, leverage, margins, inventory, or business assumptions for internal consistency. Human validators recalculate the standard answer while AI reference review flags skipped reasoning, wrong formulas, unit confusion, or contradictions between prompt and answer.'
         },
         {
-          dimension: zh ? '格式可解析性' : 'Format parseability',
+          dimension: zh ? '推理链完整性' : 'Reasoning-chain completeness',
           weight: 25,
-          description: zh ? '输出是否符合 JSONL/schema，能否稳定进入后续流程。' : 'Whether output follows JSONL/schema and can enter downstream workflows.'
+          description: zh
+            ? '检查每条 QA 是否包含多轮或多步推导，而不是单步查表答案；推理链应明确列出关键中间量、计算顺序、商业约束和最终判断。validator 应标记“只有答案没有过程”“过程无法复现答案”“中间假设未说明”的样本。'
+            : 'Check that each QA item contains multi-turn or multi-step derivation rather than a one-step lookup answer. The reasoning should expose intermediate values, calculation order, business constraints, and final judgment.'
         },
         {
           dimension: zh ? '覆盖度与多样性' : 'Coverage and diversity',
           weight: 25,
-          description: zh ? '是否覆盖常见、困难和边界 case，避免模板化重复。' : 'Whether common, hard, and boundary cases are covered without template repetition.'
+          description: zh
+            ? '对 500 条样本做主题分布统计，确保覆盖定价、现金流、财务报表、市场进入、供应链、风险评估、贷款/清算、投资回报等多个商业推演场景；检测题面模板重复、数字替换式伪多样性和标签集中度过高的问题。'
+            : 'Run topic distribution checks across the 500 samples to cover pricing, cash flow, financial statements, market entry, supply chain, risk, lending/liquidation, and ROI scenarios. Detect template repetition and superficial numeric substitutions.'
         },
         {
-          dimension: zh ? '可复核证据' : 'Review evidence',
-          weight: 10,
-          description: zh ? 'validator 能否根据提交内容复现评分依据。' : 'Whether validators can reproduce the scoring rationale from submitted artifacts.'
+          dimension: zh ? '结构化可训练性' : 'Fine-tuning readiness',
+          weight: 15,
+          description: zh
+            ? '检查 JSONL/schema 是否稳定，每条记录应包含 question、reasoning、answer、difficulty、topic/tag 等字段；字段为空、答案不可解析、difficulty 与题目复杂度明显不匹配、标签粒度混乱都应扣分。'
+            : 'Check JSONL/schema stability. Each record should include question, reasoning, answer, difficulty, and topic/tag fields. Empty fields, unparseable answers, mismatched difficulty, or inconsistent tag granularity should be penalized.'
         }
       ],
       citations: [
@@ -469,9 +465,9 @@ function createFallbackStrategyResponse(
           reason: zh ? '用于说明 JSONL 数据集每行一条记录的可解析约束。' : 'Reference for one-record-per-line JSONL parseability.'
         },
         {
-          label: 'OWASP Smart Contract Security',
-          source: 'https://owasp.org/www-project-smart-contract-top-10/',
-          reason: zh ? '用于安全审计类数据集的漏洞覆盖维度参考。' : 'Reference for vulnerability coverage dimensions in audit datasets.'
+          label: 'BIG-bench / reasoning benchmark style',
+          source: 'https://github.com/google/BIG-bench',
+          reason: zh ? '用于参考复杂推理 benchmark 的任务结构、难度和多样性设计。' : 'Reference for task structure, difficulty, and diversity in reasoning benchmarks.'
         }
       ]
     },
@@ -485,8 +481,12 @@ function createFallbackStrategyResponse(
       ]
     })),
     agentReasoningSummary: zh
-      ? `Z.AI 官方 API 暂时未返回可解析结果，已用本地 fallback 生成 validator 规模、格式严格度、AI/人工评分占比、threshold/refund 四组策略问题。${error ? `原因：${error}` : ''}`
-      : `Z.AI official API did not return a parseable result, so local fallback generated validator scale, format strictness, AI/human scoring mix, and threshold/refund strategy questions.${error ? ` Reason: ${error}` : ''}`,
+      ? phase === 'methodology'
+        ? `Z.AI 官方 API 暂时未返回可解析结果，已用本地 fallback 生成金融多轮推理 QA 数据集验收打分方案。${error ? `原因：${error}` : ''}`
+        : `Z.AI 官方 API 暂时未返回可解析结果，已用本地 fallback 生成 validator 规模、格式严格度、AI/人工评分占比、threshold/refund 四组策略问题。${error ? `原因：${error}` : ''}`
+      : phase === 'methodology'
+        ? `Z.AI official API did not return a parseable result, so local fallback generated the financial multi-step reasoning QA evaluation methodology.${error ? ` Reason: ${error}` : ''}`
+        : `Z.AI official API did not return a parseable result, so local fallback generated validator scale, format strictness, AI/human scoring mix, and threshold/refund strategy questions.${error ? ` Reason: ${error}` : ''}`,
     error
   };
 }
