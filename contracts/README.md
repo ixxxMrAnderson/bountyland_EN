@@ -1,3 +1,7 @@
+TODO: 需要一个可传参数的奖励发放机制（根据task动态设置）
+      top K miner才能拿钱 K本身作为参数传入 前K的miner拿钱的比例也通过参数传入。假设K=3比例为[50, 30, 20]意思前三分别拿50%, 30%, 20%。
+      validator和miner奖池的占比也作为参数传入
+
 # 合约说明
 
 `src/ComputeOutsourcePlatform.sol` 是当前项目的 MVP 结算合约，目标是部署到 Sepolia 测试网，用于任务发布、Worker 接单、结果提交、信誉更新和奖励结算。
