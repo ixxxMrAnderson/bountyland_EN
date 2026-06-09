@@ -54,70 +54,52 @@ abstract contract ResultManager is ReputationManager {
         );
     }
 
-    function _finalizeTask(uint256 taskId) internal {
+    function _finalizeTask(
+        uint256 taskId,
+        address[] calldata recipients,
+        uint256[] calldata bpsShares
+    ) internal {
         Task storage task = _tasks[taskId];
         require(task.status == TaskStatus.Open, "task not open");
-        require(task.evaluatedWorkerCount > 0, "no submitted results");
-        require(block.timestamp > task.deadline || task.evaluatedWorkerCount == task.workerCount, "task still active");
+        require(recipients.length > 0, "empty recipients");
+        require(recipients.length == bpsShares.length, "length mismatch");
+        require(
+            block.timestamp > task.deadline || (task.workerCount > 0 && task.evaluatedWorkerCount == task.workerCount),
+            "task still active"
+        );
 
         task.status = TaskStatus.Finalized;
 
-        if (task.totalFinalScore == 0) {
-            uint256 fullRefundAmount = task.rewardPool;
-            _pendingRewards[task.creator] += fullRefundAmount;
-            emit TaskFinalized(taskId, 0, 0, fullRefundAmount);
-            return;
-        }
-
-        uint256 totalWorkerReward = (task.rewardPool * (_MAX_BPS - _validatorRewardBps)) / _MAX_BPS;
-        (uint256 allocatedWorkerReward, uint256 allocatedValidatorReward) = _allocateTaskRewards(
-            taskId,
-            totalWorkerReward,
-            task.rewardPool - totalWorkerReward,
-            task.totalFinalScore,
-            task.validatedResultCount
-        );
-
-        uint256 refundAmount = task.rewardPool - allocatedWorkerReward - allocatedValidatorReward;
+        uint256 allocatedReward = _allocateRewardsByBps(taskId, task.rewardPool, recipients, bpsShares);
+        uint256 refundAmount = task.rewardPool - allocatedReward;
         if (refundAmount > 0) {
             _pendingRewards[task.creator] += refundAmount;
         }
 
-        task.totalWorkerReward = allocatedWorkerReward;
-        task.totalValidatorReward = allocatedValidatorReward;
+        task.allocatedReward = allocatedReward;
+        task.refundedReward = refundAmount;
 
-        emit TaskFinalized(taskId, allocatedWorkerReward, allocatedValidatorReward, refundAmount);
+        emit TaskFinalized(taskId, allocatedReward, refundAmount);
     }
 
-    function _allocateTaskRewards(
+    function _allocateRewardsByBps(
         uint256 taskId,
-        uint256 totalWorkerReward,
-        uint256 totalValidatorReward,
-        uint256 totalFinalScore,
-        uint256 validatedResultCount
-    ) internal returns (uint256 allocatedWorkerReward, uint256 allocatedValidatorReward) {
-        address[] storage taskWorkers = _taskWorkers[taskId];
+        uint256 rewardPool,
+        address[] calldata recipients,
+        uint256[] calldata bpsShares
+    ) internal returns (uint256 allocatedReward) {
+        uint256 totalBps = 0;
 
-        for (uint256 i = 0; i < taskWorkers.length; i++) {
-            address worker = taskWorkers[i];
-            Result storage result = _results[taskId][worker];
-            if (!result.submitted || result.workerScore == 0) {
-                continue;
-            }
+        for (uint256 i = 0; i < recipients.length; i++) {
+            require(recipients[i] != address(0), "zero recipient");
+            require(bpsShares[i] > 0, "zero share");
+            totalBps += bpsShares[i];
+            require(totalBps <= _MAX_BPS, "shares exceed 100%");
 
-            uint256 workerReward = (totalWorkerReward * result.workerScore) / totalFinalScore;
-            uint256 validatorReward = 0;
-            if (result.validator != address(0) && validatedResultCount > 0) {
-                validatorReward = totalValidatorReward / validatedResultCount;
-                _pendingRewards[result.validator] += validatorReward;
-                emit ValidatorRewardAllocated(taskId, result.validator, validatorReward);
-            }
-
-            allocatedWorkerReward += workerReward;
-            allocatedValidatorReward += validatorReward;
-            _pendingRewards[worker] += workerReward;
-
-            emit WorkerRewardAllocated(taskId, worker, workerReward);
+            uint256 amount = (rewardPool * bpsShares[i]) / _MAX_BPS;
+            allocatedReward += amount;
+            _pendingRewards[recipients[i]] += amount;
+            emit RewardAllocated(taskId, recipients[i], bpsShares[i], amount);
         }
     }
 }

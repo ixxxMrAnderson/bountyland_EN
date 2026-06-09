@@ -1,18 +1,14 @@
-TODO: 需要一个可传参数的奖励发放机制（根据task动态设置）
-      top K miner才能拿钱 K本身作为参数传入 前K的miner拿钱的比例也通过参数传入。假设K=3比例为[50, 30, 20]意思前三分别拿50%, 30%, 20%。
-      validator和miner奖池的占比也作为参数传入
-
 # 合约说明
 
-`src/ComputeOutsourcePlatform.sol` 是当前项目的 MVP 结算合约，目标是部署到 Sepolia 测试网，用于任务发布、Worker 接单、结果提交、信誉更新和奖励结算。
+`src/ComputeOutsourcePlatform.sol` 是当前项目的 MVP 结算合约，目标部署到 Sepolia 测试网，用于任务发布、Worker 接单、结果提交、链上信誉记录和奖池结算。
 
-合约仍然只部署一个主合约：
+合约只部署一个主合约：
 
 ```text
 ComputeOutsourcePlatform
 ```
 
-源码通过继承做逻辑分层，方便维护：
+源码通过继承做逻辑分层，部署时仍然是一个合约地址：
 
 ```text
 src/
@@ -28,17 +24,18 @@ src/
 ## 已实现能力
 
 - 用户创建任务，并把 ETH 打入任务奖池。
-- 用户可在没有 Worker 提交前取消任务并取回奖池。
-- 用户可给任务追加资金。
+- 用户可以给任务追加资金。
+- 用户可以在没有 Worker 提交前取消任务，并取回奖池。
 - Worker 注册并提交保证金。
 - Validator 注册并提交保证金。
+- Worker 和 Validator 都记录 reputation。
 - 一个任务支持多个 Worker 提交结果。
 - Worker 提交 `outputURI` 和 `outputHash`。
-- 后端 / 评审服务通过 `resultOracle` 提交最终评分结果。
-- 合约根据 `workerScore` 更新 Worker reputation。
-- 合约根据 `validatorScore` 更新 Validator reputation。
-- 任务结束后，合约按规则分配奖池。
-- Worker / Validator / 任务创建者通过 `claimReward()` 主动领取奖励。
+- 后端 / Agent 评审服务通过 `resultOracle` 提交最终结果。
+- 合约记录 `workerScore`，并更新 Worker reputation。
+- 合约记录 `validatorScore`，并更新 Validator reputation。
+- 奖励分配比例由链下后端 / Agent 计算，合约只接收最终收款人和 BPS 比例。
+- Worker / Validator / 任务创建者通过 `claimReward()` 主动领取待领取金额。
 - 合约使用 pull payment 模式和 reentrancy guard，避免在结算循环里直接转账。
 
 ## 任务类型
@@ -74,9 +71,9 @@ reportHash:
 
 ## 评分模型
 
-评分细则在链下完成，合约不计算复杂评分。
+评分细则全部在链下完成，合约不计算排名、不计算偏离度、不内置奖励规则。
 
-后端、Validator 服务或 Agent 聚合人工评分和 Agent 评分后，调用：
+后端、Validator 服务、Agent 和人工评审完成评分后，由 `resultOracle` 调用：
 
 ```text
 submitResult(taskId, worker, validator, workerScore, validatorScore, reportURI, reportHash)
@@ -86,36 +83,65 @@ submitResult(taskId, worker, validator, workerScore, validatorScore, reportURI, 
 
 ```text
 workerScore:
-Worker 交付结果的最终评分。
-用于更新 Worker reputation，并在多个 Worker 之间按权重分配 Worker 奖励池。
+Worker 交付结果的最终评分。用于更新 Worker reputation，也可以被链下 Agent 用来决定排名和奖励比例。
 
 validatorScore:
-Validator 本次评判准确度的评分。
-用于更新 Validator reputation，并作为链上凭证记录。
-不会影响 Validator 奖励金额。
+Validator 本次评判准确度的评分。用于更新 Validator reputation，并作为链上凭证记录。
+validatorScore 不直接决定 Validator 奖励金额。
 ```
 
-Validator 奖励逻辑：
+## 奖励分配模型
+
+合约没有默认的 Validator 奖池比例，也不会按分数自动分配奖励。
+
+最终奖励由链下后端 / Agent 计算，合约在任务结束时只接收最终分配结果：
 
 ```text
-validatorRewardBps 决定任务奖池里有多少比例留给 Validator。
-Validator 奖励池按有效验证结果数量平均分。
-validatorScore 只影响信誉，不影响奖励比例。
+finalizeTask(taskId, recipients, bpsShares)
 ```
+
+参数含义：
+
+```text
+recipients:
+收款地址列表，可以包含 Worker、Validator 或其他需要结算的地址。
+
+bpsShares:
+每个收款地址对应的 BPS 比例。10000 BPS = 100%。
+```
+
+示例 1：只给一个获胜 Worker 发全部奖池。
+
+```text
+recipients = [worker1]
+bpsShares = [10000]
+```
+
+示例 2：Validator 获得 10%，前三名 Worker 获得剩余 90% 的 50% / 30% / 20%。
+
+```text
+recipients = [validator1, worker1, worker2, worker3]
+bpsShares = [1000, 4500, 2700, 1800]
+```
+
+如果 `bpsShares` 总和小于 `10000`，剩余奖池会退回给任务创建者的 `pendingRewards`，任务创建者同样通过 `claimReward()` 领取。
 
 ## 钱包模型
 
 合约不绑定具体钱包。
 
-普通钱包、前端钱包、后端钱包、Safe、Cobo Agentic Wallet 都可以调用同一套 ABI。
-
-前端负责连接钱包和发起交易，合约只识别：
+普通钱包、前端钱包、后端钱包、Safe、Cobo Agentic Wallet 都可以调用同一套 ABI。钱包连接和交易发起由前端或后端负责，合约只识别：
 
 ```text
 msg.sender
 ```
 
-后端方案中，`resultOracle` 是后端服务控制的钱包地址。后端在链下完成评分后，用该钱包调用 `submitResult()`。
+当前推荐后端方案：
+
+- 用户通过前端钱包创建任务、追加资金、注册角色、提交结果、领取奖励。
+- 后端控制 `resultOracle` 钱包。
+- Agent 和人工评审在链下完成评分、排名和奖励比例计算。
+- 后端用 `resultOracle` 钱包调用 `submitResult()` 和 `finalizeTask()`。
 
 ## Sepolia 构造参数
 
@@ -123,17 +149,13 @@ msg.sender
 
 ```text
 initialResultOracle:
-后端 / 评审服务的钱包地址。只有这个地址能提交最终评分结果。
+后端 / 评审服务的钱包地址。只有这个地址能提交最终评分和最终奖励分配。
 
 initialMinWorkerStake:
 Worker 最小保证金，单位 wei。
 
 initialMinValidatorStake:
 Validator 最小保证金，单位 wei。
-
-initialValidatorRewardBps:
-Validator 奖励池占任务奖池的比例，单位 BPS。
-1000 表示 10%。
 ```
 
 Demo 推荐值：
@@ -142,7 +164,6 @@ Demo 推荐值：
 initialResultOracle: 后端 / 评审钱包地址
 initialMinWorkerStake: 1000000000000000
 initialMinValidatorStake: 5000000000000000
-initialValidatorRewardBps: 1000
 ```
 
 说明：
@@ -150,14 +171,12 @@ initialValidatorRewardBps: 1000
 ```text
 1000000000000000 wei = 0.001 ETH
 5000000000000000 wei = 0.005 ETH
-1000 BPS = 10%
 ```
 
 这些参数部署后也可以由 owner 调整：
 
 ```text
 setStakeRequirements(newMinWorkerStake, newMinValidatorStake)
-setValidatorRewardBps(newValidatorRewardBps)
 setResultOracle(newResultOracle)
 ```
 
@@ -197,7 +216,6 @@ SEPOLIA_PRIVATE_KEY=部署钱包私钥
 RESULT_ORACLE_ADDRESS=后端 / 评审服务钱包地址
 MIN_WORKER_STAKE_WEI=1000000000000000
 MIN_VALIDATOR_STAKE_WEI=5000000000000000
-VALIDATOR_REWARD_BPS=1000
 ```
 
 部署成功后，脚本会写入：
@@ -206,18 +224,9 @@ VALIDATOR_REWARD_BPS=1000
 contracts/deployments/sepolia.json
 ```
 
-该文件包含：
+该文件包含合约地址、部署交易 hash、构造参数和 ABI，属于本地部署产物，默认被 `.gitignore` 忽略。
 
-```text
-合约地址
-部署交易 hash
-构造参数
-ABI
-```
-
-该文件属于部署产物，默认被 `.gitignore` 忽略。
-
-同时，脚本还会写入一个可提交给仓库的共享配置文件：
+同时，脚本还会写入一个可提交到仓库的共享配置文件：
 
 ```text
 packages/shared/src/contracts/compute-platform-sepolia.json

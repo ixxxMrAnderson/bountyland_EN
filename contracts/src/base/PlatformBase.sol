@@ -10,10 +10,9 @@ abstract contract PlatformBase {
     uint256 internal _nextTaskId = 1;
     uint256 internal _minWorkerStake;
     uint256 internal _minValidatorStake;
-    uint256 internal _validatorRewardBps;
     address internal _owner;
     address internal _resultOracle;
-    bool private _locked;
+    bool internal _locked;
 
     enum TaskStatus {
         None,
@@ -31,8 +30,8 @@ abstract contract PlatformBase {
         uint256 deadline;
         TaskStatus status;
         uint256 totalFinalScore;
-        uint256 totalWorkerReward;
-        uint256 totalValidatorReward;
+        uint256 allocatedReward;
+        uint256 refundedReward;
         uint256 workerCount;
         uint256 evaluatedWorkerCount;
         uint256 validatedResultCount;
@@ -82,7 +81,6 @@ abstract contract PlatformBase {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event ResultOracleUpdated(address indexed previousOracle, address indexed newOracle);
     event StakeRequirementsUpdated(uint256 _minWorkerStake, uint256 _minValidatorStake);
-    event ValidatorRewardBpsUpdated(uint256 previousBps, uint256 newBps);
     event TaskCreated(
         uint256 indexed taskId,
         address indexed creator,
@@ -96,8 +94,7 @@ abstract contract PlatformBase {
     event TaskCancelled(uint256 indexed taskId, uint256 refundAmount);
     event TaskFinalized(
         uint256 indexed taskId,
-        uint256 totalWorkerReward,
-        uint256 totalValidatorReward,
+        uint256 allocatedReward,
         uint256 refundAmount
     );
     event WorkerRegistered(address indexed worker, uint256 stake, uint256 reputation);
@@ -119,8 +116,7 @@ abstract contract PlatformBase {
         string reportURI,
         bytes32 reportHash
     );
-    event WorkerRewardAllocated(uint256 indexed taskId, address indexed worker, uint256 amount);
-    event ValidatorRewardAllocated(uint256 indexed taskId, address indexed validator, uint256 amount);
+    event RewardAllocated(uint256 indexed taskId, address indexed recipient, uint256 bpsShare, uint256 amount);
     event ReputationUpdated(address indexed account, bool indexed isValidator, uint256 reputation);
     event RewardClaimed(address indexed account, uint256 amount);
 

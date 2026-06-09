@@ -26,8 +26,8 @@ abstract contract TaskManager is PlatformBase {
             deadline: deadline,
             status: TaskStatus.Open,
             totalFinalScore: 0,
-            totalWorkerReward: 0,
-            totalValidatorReward: 0,
+            allocatedReward: 0,
+            refundedReward: 0,
             workerCount: 0,
             evaluatedWorkerCount: 0,
             validatedResultCount: 0

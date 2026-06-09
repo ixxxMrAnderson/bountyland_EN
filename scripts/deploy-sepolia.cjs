@@ -21,7 +21,6 @@ async function main() {
   const resultOracle = requireEnv("RESULT_ORACLE_ADDRESS");
   const minWorkerStake = requireEnv("MIN_WORKER_STAKE_WEI");
   const minValidatorStake = requireEnv("MIN_VALIDATOR_STAKE_WEI");
-  const validatorRewardBps = requireEnv("VALIDATOR_REWARD_BPS");
 
   if (!hre.ethers.isAddress(resultOracle)) {
     throw new Error("RESULT_ORACLE_ADDRESS must be a valid EVM address");
@@ -35,7 +34,6 @@ async function main() {
     resultOracle,
     minWorkerStake,
     minValidatorStake,
-    validatorRewardBps,
   );
 
   const deploymentTx = contract.deploymentTransaction();
@@ -57,7 +55,6 @@ async function main() {
       resultOracle,
       minWorkerStake,
       minValidatorStake,
-      validatorRewardBps,
     },
     abi: artifact.abi,
   };

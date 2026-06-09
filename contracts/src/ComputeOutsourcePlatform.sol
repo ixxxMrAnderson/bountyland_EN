@@ -28,22 +28,18 @@ contract ComputeOutsourcePlatform is TaskManager, StakeManager, ResultManager {
     constructor(
         address initialResultOracle,
         uint256 initialMinWorkerStake,
-        uint256 initialMinValidatorStake,
-        uint256 initialValidatorRewardBps
+        uint256 initialMinValidatorStake
     ) {
         require(initialResultOracle != address(0), "result oracle required");
-        require(initialValidatorRewardBps <= 2_000, "validator reward too high");
 
         _owner = msg.sender;
         _resultOracle = initialResultOracle;
         _minWorkerStake = initialMinWorkerStake;
         _minValidatorStake = initialMinValidatorStake;
-        _validatorRewardBps = initialValidatorRewardBps;
 
         emit OwnershipTransferred(address(0), msg.sender);
         emit ResultOracleUpdated(address(0), initialResultOracle);
         emit StakeRequirementsUpdated(initialMinWorkerStake, initialMinValidatorStake);
-        emit ValidatorRewardBpsUpdated(0, initialValidatorRewardBps);
     }
 
     function transferOwnership(address newOwner) external onlyOwner {
@@ -62,12 +58,6 @@ contract ComputeOutsourcePlatform is TaskManager, StakeManager, ResultManager {
         _minWorkerStake = newMinWorkerStake;
         _minValidatorStake = newMinValidatorStake;
         emit StakeRequirementsUpdated(newMinWorkerStake, newMinValidatorStake);
-    }
-
-    function setValidatorRewardBps(uint256 newValidatorRewardBps) external onlyOwner {
-        require(newValidatorRewardBps <= 2_000, "validator reward too high");
-        emit ValidatorRewardBpsUpdated(_validatorRewardBps, newValidatorRewardBps);
-        _validatorRewardBps = newValidatorRewardBps;
     }
 
     function createTask(
@@ -136,10 +126,12 @@ contract ComputeOutsourcePlatform is TaskManager, StakeManager, ResultManager {
         _submitResult(taskId, worker, validator, workerScore, validatorScore, reportURI, reportHash);
     }
 
-    function finalizeTask(uint256 taskId) external nonReentrant {
-        Task storage task = _tasks[taskId];
-        require(msg.sender == task.creator || msg.sender == _owner, "not authorized");
-        _finalizeTask(taskId);
+    function finalizeTask(
+        uint256 taskId,
+        address[] calldata recipients,
+        uint256[] calldata bpsShares
+    ) external onlyResultOracle nonReentrant {
+        _finalizeTask(taskId, recipients, bpsShares);
     }
 
     function claimReward() external nonReentrant {
@@ -178,10 +170,6 @@ contract ComputeOutsourcePlatform is TaskManager, StakeManager, ResultManager {
 
     function minValidatorStake() external view returns (uint256) {
         return _minValidatorStake;
-    }
-
-    function validatorRewardBps() external view returns (uint256) {
-        return _validatorRewardBps;
     }
 
     function owner() external view returns (address) {
@@ -242,8 +230,8 @@ contract ComputeOutsourcePlatform is TaskManager, StakeManager, ResultManager {
         returns (
             uint256 rewardPool,
             uint256 totalFinalScore,
-            uint256 totalWorkerReward,
-            uint256 totalValidatorReward,
+            uint256 allocatedReward,
+            uint256 refundedReward,
             uint256 workerCount,
             uint256 evaluatedWorkerCount,
             uint256 validatedResultCount
@@ -253,8 +241,8 @@ contract ComputeOutsourcePlatform is TaskManager, StakeManager, ResultManager {
         return (
             task.rewardPool,
             task.totalFinalScore,
-            task.totalWorkerReward,
-            task.totalValidatorReward,
+            task.allocatedReward,
+            task.refundedReward,
             task.workerCount,
             task.evaluatedWorkerCount,
             task.validatedResultCount
