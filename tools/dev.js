@@ -4,10 +4,6 @@ const processes = [
   spawn("node", ["apps/api/src/server.js"], {
     stdio: "inherit",
     env: { ...process.env, API_PORT: process.env.API_PORT || "8787" }
-  }),
-  spawn("node", ["apps/web/server.js"], {
-    stdio: "inherit",
-    env: { ...process.env, WEB_PORT: process.env.WEB_PORT || "5173" }
   })
 ];
 

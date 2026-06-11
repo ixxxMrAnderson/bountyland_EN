@@ -1,5 +1,4 @@
-from functools import partial
-from http.server import BaseHTTPRequestHandler, SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
 import hashlib
@@ -7,7 +6,6 @@ import json
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-WEB_ROOT = ROOT / "apps" / "web"
 
 TASKS = {}
 SUBMISSIONS = {}
@@ -364,18 +362,13 @@ class ReusableHTTPServer(ThreadingHTTPServer):
 
 if __name__ == "__main__":
     api_server = ReusableHTTPServer(("127.0.0.1", 8787), ApiHandler)
-    web_handler = partial(SimpleHTTPRequestHandler, directory=WEB_ROOT)
-    web_server = ReusableHTTPServer(("127.0.0.1", 5173), web_handler)
 
     Thread(target=api_server.serve_forever, daemon=True).start()
-    Thread(target=web_server.serve_forever, daemon=True).start()
     print("API listening on http://127.0.0.1:8787", flush=True)
-    print("Web listening on http://127.0.0.1:5173", flush=True)
     print("Press Ctrl+C to stop.", flush=True)
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
         api_server.shutdown()
-        web_server.shutdown()
         print("\nStopped.")

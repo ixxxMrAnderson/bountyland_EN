@@ -2,16 +2,100 @@
 
 This file defines the frontend experience for the MVP.
 
-The frontend should focus on four primary topic pages:
+The frontend should have one cinematic entry screen, then focus on four primary product pages:
 
 ```text
+0. Intro / Login
 1. Define New Task
-2. Active Tasks
+2. Wanted Order Hall
 3. Activities
-4. Platform Agents
+4. Hall-of-Fame Killer Agents
 ```
 
-The goal is to make task creation feel like an agent-guided workflow, while keeping the marketplace of executable tasks easy for miners and validators to browse.
+The goal is to make task creation feel like entering BountyLand: users post "wanted" computation orders, platform killer agents can solve specialized problems, and the open market can mine / validate tasks through a high-trust order hall.
+
+The intro can feel like a high-production western game. After login, the actual app should become restrained, premium, and efficient: less theatrical, more like a clean high-end operations console.
+
+---
+
+## 0. Intro / Login
+
+### Core Idea
+
+Before entering the product, show an import / intro page that establishes the BountyLand metaphor.
+
+Visual direction:
+
+```text
+大制作西部游戏风
+Dusty frontier / wanted board / cinematic title screen
+High drama only on this entry page
+```
+
+Image references:
+
+```text
+Intro page composition:
+  reference: img/intro_page_concept.png
+
+Main app theme candidates:
+  dark premium theme reference: img/dark_concept.png
+
+  light premium theme reference: img/light_concept.png
+```
+
+Usage:
+
+```text
+- Intro / Login should visually follow img/intro_page_concept.png.
+- After login, choose either dark_concept or light_concept as the main app theme direction.
+- Do not keep the full cinematic western style inside every dashboard page.
+- Main product pages should stay clean, restrained, and premium.
+```
+
+Primary screen:
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│                                                            │
+│                       BountyLand                           │
+│                                                            │
+│                Wanted orders for computation               │
+│                                                            │
+│                   Click anywhere to start                  │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+```
+
+Click behavior:
+
+```text
+Click anywhere:
+  open floating login window
+```
+
+Login modal:
+
+```text
+┌────────────────────────────────────────────┐
+│ Enter BountyLand                       [x] │
+│                                            │
+│ Wallet / demo login                        │
+│ Cobo Wallet: Mock connected                │
+│                                            │
+│ [Enter the hall]                           │
+└────────────────────────────────────────────┘
+```
+
+After login:
+
+```text
+Enter main app
+Style shifts to restrained / premium / efficient
+No giant marketing hero after login
+```
+
+The intro page is not a dashboard page. It is an entry ritual.
 
 ---
 
@@ -19,145 +103,188 @@ The goal is to make task creation feel like an agent-guided workflow, while keep
 
 ### Core Idea
 
-This page is where the user chooses how to define a new compute outsourcing task.
+This page is where the user chooses how to create a BountyLand wanted order.
 
-The user should not start from a form with many fields. The first screen should show three large platform-agent entry bubbles:
+After login, the chatbot should not be the first visible object. The first screen should show three large horizontal entry bubbles. Each bubble is larger than the older compact bubbles and should feel like a premium selection surface.
+
+The three bubbles together should occupy roughly half of the available screen height, excluding the tab/sidebar/navigation area.
+
+### Main Entry Bubble Layout
+
+Suggested layout:
 
 ```text
-┌────────────────────────────────────────────┐
-│ 我想要一个特定的数据集                     │
-│ 数据采集 / 筛查 / 清洗 agent               │
-│ Helps define dataset scope and quality     │
-└────────────────────────────────────────────┘
-
-┌────────────────────────────────────────────┐
-│ 我想 audit 一个 Web3 协议 / 程序            │
-│ Code auditor agent                         │
-│ Helps define audit scope and evidence      │
-└────────────────────────────────────────────┘
-
-┌────────────────────────────────────────────┐
-│ 其他计算外包任务                           │
-│ 帮忙拟定订单进入人工 miner 平台            │
-│ Uses the current order drafting workflow   │
-└────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ Define Wanted Order                                           │
+│ Choose how this computation bounty should enter BountyLand.   │
+│                                                              │
+│ ┌──────────────────────────────────────────────────────────┐ │
+│ │ 我需要 Web3 coding debug                                 │ │
+│ │ Platform Debug Agent · GLM-4.5 Flash · Rating 4.8/5      │ │
+│ │ Audit/debug smart contracts, repos, logs, failing tests. │ │
+│ └──────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ ┌──────────────────────────────────────────────────────────┐ │
+│ │ 我需要数据集                                             │ │
+│ │ Data Mining Agent · Dataset scope + cleaning · 4.7/5     │ │
+│ │ Define collection, filtering, schema, validation.        │ │
+│ └──────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ ┌──────────────────────────────────────────────────────────┐ │
+│ │ 我需要自定义 task warrant                                │ │
+│ │ Spec Agent · rubric + reward + settlement · 4.6/5        │ │
+│ │ Draft criteria and send the order into the hall.         │ │
+│ └──────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### Bubble 1: Dataset Platform Agent
-
-Label:
+Bubble visual rules:
 
 ```text
-我想要一个特定的数据集
+- horizontal rectangular bubbles, not tiny square cards
+- each bubble has title, agent intro, rating/reputation, and status
+- use subtle premium styling after login
+- can include a small agent avatar / badge on the right
+- the three bubbles together occupy about half the post-login content area
+- the old centered chatbot should only appear after choosing custom task warrant
+```
+
+### Bubble 1: Web3 Coding Debug
+
+```text
+我需要 Web3 coding debug
 ```
 
 Subtitle:
 
 ```text
-数据采集 / 筛查 / 清洗 agent
+Platform Debug Agent
+Hooked with GLM-4.5 Flash
+Open review score: 4.8 / 5
 ```
 
 Short intro:
 
 ```text
-For users who need a specific dataset, this platform agent helps turn a dataset idea into collection scope, filtering rules, cleaning standards, schema, quality criteria, and validator acceptance checks.
+For users who need Web3 protocol audit, smart contract debugging, failing-test diagnosis, or security triage. The platform Debug Agent helps formalize the problem, estimate a bounty, and produce an executable wanted order.
 ```
 
-Examples:
+Click behavior:
 
 ```text
-- CV / resume dataset
-- finance reasoning QA dataset
-- domain-specific instruction tuning dataset
-- labeled smart contract vulnerability dataset
+Click bubble:
+  open formalized Web3 debug / audit form
 ```
 
-MVP click behavior:
+Form fields:
 
 ```text
-Clicking this bubble opens a placeholder / coming-soon agent panel.
-The full dataset-agent interaction is pending.
+- repo URL / codebase upload
+- contract address / chain / VM if relevant
+- error log or failing test output
+- suspected issue type
+- target files / contract scope
+- expected deliverable:
+  - root cause
+  - patch suggestion
+  - PoC / reproduction
+  - audit note
+- deadline / urgency
+- privacy mode
 ```
 
-Future interaction:
+Agent behavior after form submission:
 
 ```text
-The dataset agent should ask about:
-- domain and use case
-- dataset size
+Debug Agent reads the form
+  ↓
+estimates complexity and suggested bounty
+  ↓
+drafts evaluation criteria and acceptance checks
+  ↓
+user pays / mock approves escrow
+  ↓
+task enters Wanted Order Hall
+  ↓
+status shows: Agent is working
+```
+
+### Bubble 2: Dataset / Data Mining
+
+Label:
+
+```text
+我需要数据集
+```
+
+Subtitle:
+
+```text
+Platform Data Mining Agent
+Dataset collection / filtering / cleaning
+Open review score: 4.7 / 5
+```
+
+Short intro:
+
+```text
+For users who need a specific dataset but do not know how to define collection scope, filtering rules, cleaning standards, schema, quality criteria, or validator acceptance checks.
+```
+
+Click behavior:
+
+```text
+Click bubble:
+  open formalized dataset request form
+```
+
+Form fields:
+
+```text
+- domain / use case
+- dataset size target
 - source constraints
 - privacy / licensing constraints
 - schema and output format
-- cleaning and deduplication standard
+- cleaning / deduplication standard
+- labeling requirements
 - validation methodology
-- reward pool and settlement preference
+- deadline / urgency
 ```
 
-### Bubble 2: Web3 Code Auditor Agent
+Agent behavior after form submission:
+
+```text
+Data Mining Agent reads the form
+  ↓
+estimates dataset cost and suggested bounty
+  ↓
+drafts miner requirements and validator rubric
+  ↓
+user pays / mock approves escrow
+  ↓
+task enters Wanted Order Hall
+  ↓
+status shows: Agent is working
+```
+
+### Bubble 3: Custom Task Warrant
 
 Label:
 
 ```text
-我想 audit 一个 Web3 协议 / 程序
+我需要自定义 task warrant
 ```
 
 Subtitle:
 
 ```text
-Code auditor agent
+Spec Agent
+帮忙拟定任务评判 + 奖励结算并进入订单大厅
+Open review score: 4.6 / 5
 ```
 
-Short intro:
-
-```text
-For users who want to audit a Web3 protocol, smart contract, or program, this platform agent helps define audit scope, threat model, deliverables, severity rubric, test requirements, and validator review standards.
-```
-
-Examples:
-
-```text
-- Solidity contract audit
-- protocol economic/security review
-- reentrancy and access-control review
-- exploit proof-of-concept validation
-```
-
-MVP click behavior:
-
-```text
-Clicking this bubble opens a placeholder / coming-soon agent panel.
-The full code-auditor interaction is pending.
-```
-
-Future interaction:
-
-```text
-The code auditor agent should ask about:
-- repo or contract address
-- target chain / VM
-- contract scope
-- threat model and protected assets
-- expected deliverables
-- severity rubric
-- proof-of-concept requirements
-- validator qualification requirements
-```
-
-### Bubble 3: Other Compute Outsourcing Task
-
-Label:
-
-```text
-其他计算外包任务
-```
-
-Subtitle:
-
-```text
-帮忙拟定订单进入人工 miner 平台
-```
-
-This bubble uses the existing chat-first order drafting workflow.
+This bubble uses the previous chatbot logic.
 
 After clicking it, the UI opens:
 
@@ -197,7 +324,7 @@ Suggested flow:
    - Cobo Pact policy draft
 7. User confirms task creation.
 8. Task is created on-chain or mocked as on-chain for the demo.
-9. Task appears in Active Tasks.
+9. Task appears in Wanted Order Hall.
 ```
 
 ### Confirmation State
@@ -248,22 +375,25 @@ Status: Active
 Available for miners.
 ```
 
-Then the task should pop into the second topic page: `Active Tasks`.
+Then the task should pop into the second topic page: `Wanted Order Hall`.
 
 ---
 
-## 2. Active Tasks
+## 2. Wanted Order Hall
 
 ### Core Idea
 
-This page shows tasks that have already been created and are available for miners to accept.
+This page shows computation bounties that have already been created and are available for miners / solvers / validators to accept.
 
 For the MVP, tasks can be treated as already on-chain once the user confirms creation in the mock flow.
+
+Each computation task should be visually treated like a retro `wanted` notice. This is the core BountyLand marketplace metaphor.
 
 Each task card should visualize:
 
 ```text
 - task overview
+- wanted poster identity
 - number of miner submissions
 - reward overview
 - AI audit status
@@ -273,34 +403,49 @@ Each task card should visualize:
   - I wanna validate
 ```
 
-Each active task card should also be clickable. Clicking the card opens a floating rectangular detail modal. The modal sits above the page, has a close button in the top-right corner, and keeps the user in the same page context.
+Each wanted poster card should also be clickable. Clicking the card opens a floating rectangular detail modal. The modal sits above the page, has a close button in the top-right corner, and keeps the user in the same page context.
 
 The two role actions should be available both on the card and inside the floating detail modal.
 
-### Task Card Structure
+### Wanted Poster Card Structure
 
-Each active task should be displayed as a compact card:
+Each task should be displayed as a retro wanted poster card:
 
 ```text
 ┌────────────────────────────────────────────┐
-│ Reasoning QA Dataset Generation            │
-│ Generate 1000 QA records with answers...    │
+│                WANTED                      │
+│          Reasoning QA Dataset              │
 │                                            │
-│ Status: On-chain / Active                  │
-│ Miner submissions: 3                       │
-│ Reward pool: 0.1 ETH                       │
-│ AI audit: Enabled                          │
-│ Criteria: Dataset quality and diversity    │
+│  Bounty: 0.1 ETH                           │
+│  Status: Open / Agent is working           │
+│  Miner submissions: 3                      │
+│  AI audit: Enabled                         │
+│  Criteria: Dataset quality + diversity     │
 │                                            │
-│ [I wanna mine] [I wanna validate]           │
+│  [I wanna mine] [I wanna validate]          │
 └────────────────────────────────────────────┘
+```
+
+Wanted poster visual rules:
+
+```text
+- parchment / poster-like shape is okay here
+- title reads like a bounty notice
+- reward is prominent
+- status can show:
+  - Open for miners
+  - Agent is working
+  - Waiting for validation
+  - Scored
+  - Settled
+- do not make every other page parchment; this is specific to the order hall
 ```
 
 Click behavior:
 
 ```text
 Click card body:
-  open floating task detail modal
+  open floating wanted order detail modal
 
 Click I wanna mine:
   open miner interaction interface for this task
@@ -363,13 +508,13 @@ Payout: based on audited final score
 
 Each task card has two main actions.
 
-### Task Detail View
+### Wanted Order Detail View
 
-When a user clicks an active task card, show a floating rectangular task detail modal:
+When a user clicks a wanted poster card, show a floating rectangular wanted order detail modal:
 
 ```text
 ┌────────────────────────────────────────────────────────────┐
-│ Task details                                           [x] │
+│ Wanted order details                                   [x] │
 │                                                            │
 │ ...task content...                                         │
 │                                                            │
@@ -380,7 +525,7 @@ When a user clicks an active task card, show a floating rectangular task detail 
 Modal behavior:
 
 ```text
-- opens above Active Tasks without navigating away
+- opens above Wanted Order Hall without navigating away
 - top-right close button
 - clicking outside can also close it
 - card actions remain available inside the modal
@@ -430,6 +575,21 @@ Actions
 ```
 
 This view should make the task feel like an actual order that has already been created and can now be worked on.
+
+### Agent Working State
+
+For tasks created through Web3 Debug Agent or Data Mining Agent, the order should still enter the hall after payment / mock escrow.
+
+Show:
+
+```text
+Status: Agent is working
+Assigned killer agent: Debug Killer / Data Mining Agent
+Estimated bounty: 0.XX ETH
+Open review: pending after first output
+```
+
+The user should feel that the task has entered the same public order system, even if it is initially handled by a platform agent.
 
 ### Miner Interaction Interface
 
@@ -552,9 +712,9 @@ This page should be in the sidebar navigation:
 
 ```text
 Define New Task
-Active Tasks
+Wanted Order Hall
 Activities
-Platform Agents
+Hall-of-Fame Killer Agents
 ```
 
 Each activity row/card is clickable and opens the full detail for that activity.
@@ -741,18 +901,20 @@ Validation detail should include:
 
 ---
 
-## 4. Platform Agents
+## 4. Hall-of-Fame Killer Agents
 
 ### Core Idea
 
-`Platform Agents` is a sidebar page dedicated to explaining the two platform-provided agents:
+`Hall-of-Fame Killer Agents` is a sidebar page dedicated to platform and community agents with strong reputation.
 
 ```text
-1. Dataset Collection / Filtering / Cleaning Agent
-2. Web3 Code Auditor Agent
+1. Web3 Debug / Audit Killer
+2. Data Mining Killer
+3. Spec / Warrant Drafting Agent
+4. Future community agents that earn enough reputation
 ```
 
-This page is not the task marketplace and not a marketing landing page. It should be a practical, technical overview that helps users understand what these agents can do, how they are backed, and how their outputs connect to the human miner / validator platform.
+This page is not the task marketplace and not a generic marketing landing page. It should feel like a premium hero roster from a game, but still practical: users can inspect each agent's architecture, reputation, open review, and service history.
 
 ### Sidebar Navigation
 
@@ -760,15 +922,15 @@ The sidebar should include:
 
 ```text
 Define New Task
-Active Tasks
+Wanted Order Hall
 Activities
-Platform Agents
+Hall-of-Fame Killer Agents
 ```
 
 Chinese label:
 
 ```text
-平台 agent 简介
+名人堂 Killer Agent
 ```
 
 ### Page Layout
@@ -777,18 +939,135 @@ Suggested layout:
 
 ```text
 ┌────────────────────────────────────────────────────────────┐
-│ Platform Agents                                            │
-│ Data and code-audit agents that help users define tasks    │
-├──────────────────────────────┬─────────────────────────────┤
-│ Dataset Agent                 │ Web3 Code Auditor Agent     │
-│ architecture                  │ architecture                │
-│ capabilities                  │ capabilities                │
-│ validation backing            │ validation backing          │
-│ current status                │ current status              │
+│ Hall-of-Fame Killer Agents                                  │
+│ Agents that solve, draft, review, and earn reputation.       │
+├─────────────────┬─────────────────┬────────────────────────┤
+│ Avatar          │ Avatar          │ Avatar                 │
+│ Debug Killer    │ Data Mining     │ Spec Agent             │
+│ 4.8 / 5         │ 4.7 / 5         │ 4.6 / 5                │
+│ solved / review │ solved / review │ drafted / review       │
 └──────────────────────────────┴─────────────────────────────┘
 ```
 
-### Dataset Agent Detail
+### Hero Card Style
+
+Each agent can be displayed as a game-like hero card:
+
+```text
+┌──────────────────────────────┐
+│ [avatar]                     │
+│ Web3 Debug Killer            │
+│ GLM-4.5 Flash                │
+│ Rating: 4.8 / 5              │
+│ Reviews: 128                 │
+│ Reputation: Hall of Fame     │
+│ [Inspect agent]              │
+└──────────────────────────────┘
+```
+
+Visual rules:
+
+```text
+- hero-card feeling is welcome here
+- each card can have an avatar
+- keep the page premium and readable, not a noisy collectible wall
+- rating shown here should also appear on the first page selection bubbles
+- cards can use subtle rarity / tier labels:
+  - Candidate
+  - Verified
+  - Hall of Fame
+```
+
+### Agent Detail Modal / Page
+
+Clicking an agent card opens an agent detail view:
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│ Web3 Debug Killer                                      [x] │
+│                                                            │
+│ Avatar / model / version / reputation                      │
+│ Architecture                                               │
+│ Capabilities                                               │
+│ Recent wanted orders                                       │
+│ Open review                                                │
+│ Submit review                                              │
+└────────────────────────────────────────────────────────────┘
+```
+
+Open review:
+
+```text
+- everyone can see other people's reviews
+- users can submit a review after using or reviewing an agent output
+- review score contributes to the agent's public rating
+- high-reputation agents can graduate into Hall of Fame
+```
+
+The open review score must be reused on the Define New Task bubbles so users can decide:
+
+```text
+Use this agent
+or
+post the task into the order hall for miners
+```
+
+### Web3 Debug / Audit Killer Detail
+
+The debug killer should be described as a platform service for users who need Web3 protocol audit, coding debug, or security triage.
+
+Architecture:
+
+```text
+User codebase / bug report
+  ↓
+Scope parser
+  ↓
+Log / test failure analyzer
+  ↓
+Threat model / exploit hypothesis generator
+  ↓
+Patch suggestion / evidence planner
+  ↓
+Validator scoring methodology generator
+  ↓
+Wanted order / agent execution draft
+```
+
+Capabilities:
+
+```text
+- turns Web3 coding debug needs into structured audit/debug scope
+- identifies contract/program boundaries
+- analyzes logs, tests, and user-provided context
+- defines severity levels and expected evidence
+- drafts vulnerability checklist and validator rubric
+- estimates bounty / fee after user submits the form
+```
+
+Backing / credibility:
+
+```text
+- GLM-4.5 Flash assisted debug and audit reasoning
+- human auditor / miner execution when posted to hall
+- validator scoring and dispute review
+- artifact hash / URI recording
+- Cobo mock escrow approval for payout control
+```
+
+Current status:
+
+```text
+MVP:
+  formalized Web3 debug form
+  agent-generated fee estimate
+  task enters hall with Agent is working status
+
+Future:
+  deeper repo ingestion, test runner integration, private TEE mode
+```
+
+### Data Mining Agent Detail
 
 The dataset agent should be described as a platform service for users who want a specific dataset but do not know how to specify collection, cleaning, schema, or validation.
 
@@ -835,43 +1114,41 @@ Current status:
 
 ```text
 MVP:
-  agent intro and placeholder flow
+  formalized dataset request form
+  agent-generated cost estimate
+  task enters hall with Agent is working status
 
 Future:
   full interactive dataset-agent flow
 ```
 
-### Web3 Code Auditor Agent Detail
+### Spec / Warrant Drafting Agent Detail
 
-The code auditor agent should be described as a platform service for users who want security review, protocol audit, or program analysis.
-
-Architecture:
+The spec agent powers the third bubble and keeps the previous chatbot logic.
 
 ```text
-User audit intent
+User custom task idea
   ↓
-Scope parser
+Natural language parser
   ↓
-Threat model generator
+Scoring methodology generator
   ↓
-Severity rubric generator
+Reward / settlement strategy generator
   ↓
-Evidence / PoC requirement planner
+Miner output requirements
   ↓
-Validator scoring methodology generator
+Validator checklist
   ↓
-Human miner / auditor order draft
+Wanted order draft for public hall
 ```
 
 Capabilities:
 
 ```text
-- turns audit requests into structured audit scope
-- identifies contract/program boundaries
-- defines severity levels and expected evidence
-- drafts vulnerability checklist
-- proposes validator qualification rules
-- generates audit deliverable requirements
+- turns natural language requests into structured task warrants
+- drafts task rubric, reward pool, refund rule, and dispute trigger
+- creates miner output requirements and validator checklist
+- prepares order artifacts for the public hall
 ```
 
 Backing / credibility:
@@ -888,24 +1165,24 @@ Current status:
 
 ```text
 MVP:
-  agent intro and placeholder flow
+  existing chat-first order drafting flow
 
 Future:
-  full interactive code-auditor flow
+  richer strategy questions and reusable task warrant templates
 ```
 
 ### Relationship To Define New Task
 
-The first two bubbles on `Define New Task` should route naturally to these platform-agent concepts.
+The three bubbles on `Define New Task` should route naturally to these killer / agent concepts.
 
 ```text
+Web3 debug bubble:
+  routes to formalized Debug Killer form
+
 Dataset bubble:
-  routes to dataset-agent placeholder or future dataset-agent flow
+  routes to formalized Data Mining Agent form
 
-Web3 audit bubble:
-  routes to code-auditor-agent placeholder or future audit-agent flow
-
-Other compute outsourcing bubble:
+Custom task warrant bubble:
   routes to the existing order-drafting chat flow
 ```
 
@@ -1051,9 +1328,9 @@ The top-level navigation should be:
 
 ```text
 Define New Task
-Active Tasks
+Wanted Order Hall
 Activities
-Platform Agents
+Hall-of-Fame Killer Agents
 ```
 
 Optional later pages:
@@ -1071,39 +1348,45 @@ For now, the product should not start with many separate dashboard pages. The fi
 ## 7. MVP Frontend State Flow
 
 ```text
-Define New Task agent entry bubbles
+Intro page
         ↓
-User chooses one of three entry bubbles
+Click anywhere to start
         ↓
-If Dataset Agent or Code Auditor Agent:
-  show platform-agent placeholder / coming-soon panel
+Floating login modal
         ↓
-If Other Compute Outsourcing Task:
+Enter main app
+        ↓
+Define New Task: three large horizontal bubbles
+        ↓
+User chooses one of three paths
+        ↓
+Branch A: Web3 coding debug
+  open formalized Debug Killer form
+
+Branch B: Dataset
+  open formalized Data Mining Agent form
+
+Branch C: Custom task warrant
   open existing chat-first order drafting workflow
         ↓
-User submits task description
+Agent drafts / estimates:
+  task scope
+  evaluation rubric
+  reward / bounty estimate
+  settlement logic
         ↓
-Platform spec agent returns scoring methodology
+User reviews wanted order preview
         ↓
-User confirms or revises methodology
-        ↓
-Platform spec agent returns strategy questions
-        ↓
-User selects strategy options
-        ↓
-User enters explicit Reward Pool amount
-        ↓
-Platform spec agent returns computation order preview
-        ↓
-User confirms task
-        ↓
-User approves Reward Pool escrow through Cobo approval / mock approval
+User approves bounty escrow through Cobo approval / mock approval
         ↓
 Task status becomes Active / On-chain mock
         ↓
-Task appears in Active Tasks
+Task appears in Wanted Order Hall as retro wanted poster
         ↓
-User clicks task card to inspect details
+If platform agent path:
+  poster status shows Agent is working
+        ↓
+User clicks wanted poster to inspect details
         ↓
 Miner chooses "I wanna mine"
         ↓
@@ -1142,7 +1425,7 @@ activities:
   local projection from submissions + evaluations + settlement state
 
 selectedTask:
-  active task detail drawer/page
+  wanted order detail drawer/page
 
 selectedActivity:
   activity detail drawer/page
@@ -1154,17 +1437,25 @@ wallet:
 Current mock agent behavior:
 
 ```text
-Platform Dataset Agent:
-  placeholder / pending full interaction
+Platform Debug Killer:
+  formalized Web3 debug / audit form
+  cost / bounty estimate
+  creates Wanted Order Hall item with Agent is working status
 
-Platform Web3 Code Auditor Agent:
-  placeholder / pending full interaction
+Platform Data Mining Agent:
+  formalized dataset request form
+  cost / bounty estimate
+  creates Wanted Order Hall item with Agent is working status
 
-Task Criteria Agent:
+Spec / Warrant Agent:
+  previous chatbot logic
   drafts methodology, strategy questions, and computation order preview
 
 AI Audit Agent:
   returns a mock reference score after validator evaluation
+
+Hall-of-Fame Killer Agents:
+  show avatar, rating, architecture, open reviews, and submit-review affordance
 ```
 
 No real z.ai, Cobo, or on-chain transaction is required for the first UI demo. The UI can label confirmed tasks as:

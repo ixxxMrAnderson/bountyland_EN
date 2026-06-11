@@ -20,7 +20,8 @@ User defines task
 
 ```text
 apps/api                Dependency-free Node API and mock orchestration services
-apps/web                Dependency-free browser UI for the task flow
+apps/compute-outsourcing-platform
+                        Fancy React/Vite UI with Cobo wallet and agent workflow
 contracts/src           Solidity settlement/reputation scaffold
 packages/shared/src     Shared criteria templates and scoring logic
 docs                    Architecture notes
@@ -29,23 +30,23 @@ tools                   Local dev runner
 
 ## Run
 
-No package install is required for the current scaffold. If Node/npm is available:
+Run the fancy Vite UI:
 
 ```bash
-npm run check
-npm run dev
-```
-
-If this environment does not have Node/npm, use the Python standard-library fallback:
-
-```bash
-python3 tools/dev.py
+npm run dev:fancy
 ```
 
 Open:
 
 ```text
-http://localhost:5173
+http://localhost:3000
+```
+
+Run the mock API only:
+
+```bash
+npm run check
+npm run dev
 ```
 
 API health:

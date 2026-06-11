@@ -3,11 +3,11 @@
 This repo mirrors the product flow from sections 1 and 2 of `agent_audited_compute_outsourcing_platform.md`.
 
 ```text
-apps/web
-  Create Task UI
-    -> asks apps/api for validator criteria
-    -> lets user select criteria
-    -> creates computation order
+apps/compute-outsourcing-platform
+  Fancy React/Vite UI
+    -> Cobo wallet widget
+    -> agent workflow pages
+    -> task/order/demo surfaces
 
 apps/api
   Task Criteria Agent
