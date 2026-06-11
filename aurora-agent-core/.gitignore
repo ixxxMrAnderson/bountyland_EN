@@ -1,0 +1,10 @@
+artifacts/
+examples/artifacts/
+.env
+.env.local
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+.deps/
+.pytest_cache/

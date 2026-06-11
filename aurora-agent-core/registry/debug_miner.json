@@ -1,0 +1,73 @@
+{
+  "schema_version": "0.1.0",
+  "task_type": "code_debug",
+  "miner_id": "debug_miner",
+  "display_name": "Code Debug Miner",
+  "description": "Debug issues in public Git repositories.",
+  "intent": {
+    "keywords": ["debug", "bug", "报错", "修复", "patch", "代码"]
+  },
+  "input_contract": {
+    "required_fields": [
+      "goal",
+      "debug.code_source.type",
+      "debug.code_source.repo_url",
+      "debug.bug_description"
+    ],
+    "field_groups": [
+      {
+        "name": "reproduction_evidence",
+        "mode": "any_of",
+        "fields": [
+          "debug.reproduction.test_command",
+          "debug.reproduction.logs"
+        ],
+        "message": "请提供复现命令或错误日志。"
+      }
+    ]
+  },
+  "default_payload": {
+    "debug": {
+      "debug_mode": "full_repo",
+      "code_source": {
+        "type": "git",
+        "branch": "main",
+        "commit": null,
+        "public_only": true
+      },
+      "expected_behavior": null,
+      "actual_behavior": null,
+      "reproduction": {
+        "test_command": null,
+        "logs": null,
+        "entrypoint": null
+      },
+      "execution_policy": {
+        "allow_patch": false,
+        "allow_commands": [],
+        "timeout_seconds": 120,
+        "cleanup_repo": true
+      }
+    }
+  },
+  "pricing": {
+    "base": 0.12,
+    "currency": "ETH"
+  },
+  "routing": {
+    "assigned_agent": "debug_miner"
+  },
+  "execution": {
+    "type": "local_python",
+    "entrypoint": "aurora_agent_core.miners.debug_miner_graph:DebugMinerGraph"
+  },
+  "output_contract": {
+    "artifact_types": ["debug_report", "patch", "verification", "logs", "trace"]
+  },
+  "runtime_policy": {
+    "timeout_seconds": 120,
+    "allow_network": true,
+    "allow_patch": false,
+    "cleanup_workspace": true
+  }
+}

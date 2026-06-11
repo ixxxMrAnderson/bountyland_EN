@@ -1,0 +1,40 @@
+{
+  "schema_version": "0.1.0",
+  "task_type": "dataset_generation",
+  "miner_id": "dataset_miner",
+  "display_name": "Dataset Miner",
+  "description": "Build structured datasets from public sources.",
+  "intent": {
+    "keywords": ["数据集", "dataset", "jsonl", "csv", "样本"]
+  },
+  "input_contract": {
+    "required_fields": [
+      "goal",
+      "dataset.target_size",
+      "dataset.output_format",
+      "dataset.source_scope"
+    ],
+    "field_groups": []
+  },
+  "default_payload": {
+    "dataset": {
+      "output_format": "jsonl",
+      "source_scope": ["public_web"],
+      "source_config": {}
+    }
+  },
+  "pricing": {
+    "base": 0.05,
+    "currency": "ETH"
+  },
+  "routing": {
+    "assigned_agent": "dataset_miner"
+  },
+  "execution": {
+    "type": "local_python",
+    "entrypoint": "aurora_agent_core.miners.dataset_miner_graph:DatasetMinerGraph"
+  },
+  "output_contract": {
+    "artifact_types": ["dataset", "sources", "stats", "report", "trace"]
+  }
+}
