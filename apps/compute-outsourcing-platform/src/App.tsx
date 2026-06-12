@@ -751,17 +751,17 @@ export default function App() {
           <div className="flex-1 flex max-w-[1440px] w-full mx-auto relative divide-x divide-amber-950/20 min-h-screen">
         
         {/* ================= LEFT SIDEBAR PANEL ================= */}
-        <div className="hidden md:flex w-72 lg:w-80 flex-col justify-between p-6 bg-[#0f0a08] shrink-0 gap-6 border-r border-amber-950/40">
+        <div className="hidden md:flex w-72 lg:w-80 flex-col justify-between p-6 bg-[#0f0a08] shrink-0 gap-6 border-r border-[#4a3427]/40">
           
           <div className="flex flex-col gap-6">
             {/* Logo and Brand Title (Sheriff Badge Style) */}
-            <div className="flex items-center gap-3 bg-[#18110e] p-3 rounded-lg border border-amber-900/40">
-              <div className="w-10 h-10 rounded-full bg-[#271b14] border-2 border-amber-500 flex items-center justify-center shadow-lg shadow-amber-950/20">
-                <Scale className="w-5 h-5 text-amber-400 animate-pulse" />
+            <div className="flex items-center gap-3 bg-[#150f0c] p-3 rounded-lg border border-[#4a3427]">
+              <div className="w-10 h-10 rounded-full bg-[#1c1310] border-2 border-[#dfab6c] flex items-center justify-center shadow-lg shadow-black/30">
+                <Scale className="w-5 h-5 text-[#dfab6c] animate-pulse" />
               </div>
               <div className="flex flex-col">
-                <span className="font-serif font-black text-xs tracking-wider text-amber-400 uppercase">{t('appName')}</span>
-                <span className="font-mono text-[8px] text-amber-600 uppercase tracking-widest font-semibold mt-0.5">{t('appSubName')}</span>
+                <span className="font-serif font-black text-xs tracking-wider text-[#dfab6c] uppercase">{t('appName')}</span>
+                <span className="font-mono text-[8px] text-[#8e5c3c] uppercase tracking-widest font-bold mt-0.5">{t('appSubName')}</span>
               </div>
             </div>
 
@@ -771,60 +771,60 @@ export default function App() {
                 onClick={() => setActiveTab('DefineNewTask')}
                 className={`flex items-center justify-between px-3.5 py-3 rounded text-[11px] font-mono tracking-wider transition group border ${
                   activeTab === 'DefineNewTask'
-                    ? 'bg-amber-950/30 text-amber-400 border-amber-800'
-                    : 'text-[#8c745d] border-transparent hover:text-[#ebdcb9] hover:bg-amber-950/10'
+                    ? 'bg-[#1c1310] text-[#dfab6c] border-[#8e5c3c]/80 shadow-md'
+                    : 'text-[#8c745d] border-transparent hover:text-[#ebdcb9] hover:bg-[#150f0c]'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                  <Sparkles className={`w-4 h-4 shrink-0 transition ${activeTab === 'DefineNewTask' ? 'text-[#dfab6c]' : 'text-[#8e5c3c] group-hover:text-[#dfab6c]'}`} />
                   {t('navDefineNewTask')}
                 </div>
-                <ChevronRight className={`w-3.5 h-3.5 transition ${activeTab === 'DefineNewTask' ? 'translate-x-0.5 text-amber-500' : 'text-amber-850'}`} />
+                <ChevronRight className={`w-3.5 h-3.5 transition ${activeTab === 'DefineNewTask' ? 'translate-x-0.5 text-[#dfab6c]' : 'text-[#4a3427] group-hover:text-[#8e5c3c]'}`} />
               </button>
 
               <button
                 onClick={() => setActiveTab('ActiveTasks')}
                 className={`flex items-center justify-between px-3.5 py-3 rounded text-[11px] font-mono tracking-wider transition group border ${
                   activeTab === 'ActiveTasks'
-                    ? 'bg-amber-950/30 text-amber-400 border-amber-800'
-                    : 'text-[#8c745d] border-transparent hover:text-[#ebdcb9] hover:bg-amber-950/10'
+                    ? 'bg-[#1c1310] text-[#dfab6c] border-[#8e5c3c]/80 shadow-md'
+                    : 'text-[#8c745d] border-transparent hover:text-[#ebdcb9] hover:bg-[#150f0c]'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <ListTodo className="w-4 h-4 text-amber-500 shrink-0" />
+                  <ListTodo className={`w-4 h-4 shrink-0 transition ${activeTab === 'ActiveTasks' ? 'text-[#dfab6c]' : 'text-[#8e5c3c] group-hover:text-[#dfab6c]'}`} />
                   {t('navMarketplace')}
                 </div>
-                <ChevronRight className={`w-3.5 h-3.5 transition ${activeTab === 'ActiveTasks' ? 'translate-x-0.5 text-amber-500' : 'text-amber-850'}`} />
+                <ChevronRight className={`w-3.5 h-3.5 transition ${activeTab === 'ActiveTasks' ? 'translate-x-0.5 text-[#dfab6c]' : 'text-[#4a3427] group-hover:text-[#8e5c3c]'}`} />
               </button>
 
               <button
                 onClick={() => setActiveTab('Activities')}
                 className={`flex items-center justify-between px-3.5 py-3 rounded text-[11px] font-mono tracking-wider transition group border ${
                   activeTab === 'Activities'
-                    ? 'bg-amber-950/30 text-amber-400 border-amber-800'
-                    : 'text-[#8c745d] border-transparent hover:text-[#ebdcb9] hover:bg-amber-950/10'
+                    ? 'bg-[#1c1310] text-[#dfab6c] border-[#8e5c3c]/80 shadow-md'
+                    : 'text-[#8c745d] border-transparent hover:text-[#ebdcb9] hover:bg-[#150f0c]'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Coins className="w-4 h-4 text-amber-500 shrink-0" />
+                  <Coins className={`w-4 h-4 shrink-0 transition ${activeTab === 'Activities' ? 'text-[#dfab6c]' : 'text-[#8e5c3c] group-hover:text-[#dfab6c]'}`} />
                   {t('navNavRegistry')}
                 </div>
-                <ChevronRight className={`w-3.5 h-3.5 transition ${activeTab === 'Activities' ? 'translate-x-0.5 text-amber-500' : 'text-amber-850'}`} />
+                <ChevronRight className={`w-3.5 h-3.5 transition ${activeTab === 'Activities' ? 'translate-x-0.5 text-[#dfab6c]' : 'text-[#4a3427] group-hover:text-[#8e5c3c]'}`} />
               </button>
 
               <button
                 onClick={() => setActiveTab('PlatformAgents')}
                 className={`flex items-center justify-between px-3.5 py-3 rounded text-[11px] font-mono tracking-wider transition group border ${
                   activeTab === 'PlatformAgents'
-                    ? 'bg-amber-950/30 text-amber-400 border-amber-800'
-                    : 'text-[#8c745d] border-transparent hover:text-[#ebdcb9] hover:bg-amber-950/10 font-bold'
+                    ? 'bg-[#1c1310] text-[#dfab6c] border-[#8e5c3c]/80 shadow-md'
+                    : 'text-[#8c745d] border-transparent hover:text-[#ebdcb9] hover:bg-[#150f0c] font-bold'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Bot className="w-4 h-4 text-amber-500 shrink-0" />
+                  <Bot className={`w-4 h-4 shrink-0 transition ${activeTab === 'PlatformAgents' ? 'text-[#dfab6c]' : 'text-[#8e5c3c] group-hover:text-[#dfab6c]'}`} />
                   {locale === 'zh' ? '智算警员 & 哨兵' : 'Autonomous Sheriffs'}
                 </div>
-                <ChevronRight className={`w-3.5 h-3.5 transition ${activeTab === 'PlatformAgents' ? 'translate-x-0.5 text-amber-500' : 'text-amber-850'}`} />
+                <ChevronRight className={`w-3.5 h-3.5 transition ${activeTab === 'PlatformAgents' ? 'translate-x-0.5 text-[#dfab6c]' : 'text-[#4a3427] group-hover:text-[#8e5c3c]'}`} />
               </button>
             </nav>
           </div>
@@ -1920,11 +1920,11 @@ export default function App() {
                   </div>
                   
                   {/* Category toggles */}
-                  <div className="flex bg-[#0d0705] p-1 rounded border border-amber-950/70 gap-1 text-[10px] font-mono select-none">
-                    <span className="px-3 py-1.5 bg-amber-950/40 text-amber-500 rounded font-bold border border-amber-900/30">
+                  <div className="flex bg-[#0d0705] p-1 rounded border border-[#4a3427]/70 gap-1 text-[10px] font-mono select-none">
+                    <span className="px-3 py-1.5 bg-[#1c1310] text-[#dfab6c] rounded font-bold border border-[#8e5c3c]/30">
                       {locale === 'zh' ? `全部悬赏令 (${tasks.length})` : `All Bounties (${tasks.length})`}
                     </span>
-                    <span className="px-3 py-1.5 text-amber-850/60 uppercase">
+                    <span className="px-3 py-1.5 text-[#8e5c3c]/60 uppercase">
                       {locale === 'zh' ? '莫哈维邮道' : 'Mojave Trail'}
                     </span>
                   </div>
