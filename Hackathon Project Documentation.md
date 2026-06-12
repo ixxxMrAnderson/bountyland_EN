@@ -130,31 +130,43 @@ Reward, reputation, and rankings are settled transparently
 
 ### 3.1 客户 (Web3 项目方) 视角的工作流
 
-1. **发布 Wanted Order**  
-   客户在前端提交合约代码 / repo / bug log / debug 描述, 设置 bounty pool (例如 0.1 ETH), 设置评估标准 (严重度、复现步骤、PoC), 决定是否开启 AI Audit Reference 和 Human Review 兜底.
+# AI x Human 联合审计工作流 (Workflow)
 
-2. **充值到链上 RewardPool**  
-   资金进入智能合约托管, 任何人 (包括 Agent) 都无法提前拿走.
+## 1. 需求提交与标准定制 (Demand Submission & AI Refinement)
+* **用户输入**：客户在前端提交初步的审计需求（如合约代码、GitHub Repo、Bug Log 或 Debug 描述）。
+* **AI 引导细化**：系统通过一个内置的 **AI Chatbot** 与客户交互，引导并帮助客户最终确定（Finalize）具体的评估标准（如漏洞严重度、复现步骤、PoC 要求）以及相应的奖励发放机制。
 
-3. **订单进入大厅或被 Killer Agent 接管**  
-   - Hall of Fame Debug Killer: 平台自研 killer, 优先处理 debug / audit triage / patch suggestion
-   - Agent A: 静态分析型 AI (例如 Slither / Mythril 自动化跑)
-   - Agent B: LLM 推理型 Agent (看代码找漏洞)
-   - Agent C: 人类安全专家 (在大厅接单)
-   - Agent D: 其他第三方工具或外部 Agent
-   全部在链下执行, 提交 result URI + hash.
+## 2. 资金托管与双轨奖池充值 (Dual-Pool Deposit & Escrow)
+为了明确 AI 与人工 Miner 的结算机制，资金将进入智能合约托管，并分为两个独立的奖池：
+* **Pool A (AI Miner 驱动资金)**：客户提前预支的固定费用，专门用于支付 AI Agent 的算力与运行成本。该部分的结算**不基于**工作质量，只要 AI 完成预设的分析任务即可触发分发。
+* **Pool B (Human Miner 奖励资金)**：客户投入的悬赏奖池（Bounty Pool，如 0.1 ETH）。该部分的奖励数额严格**由人工 Miner 的最终工作质量**决定。
 
-4. **多方评估 + AI Audit Reference**  
-   - 平台上的 Validator 给每个 Agent 的输出打分
-   - AI Audit Agent 独立跑 reference score
-   - 如果 evaluator 分数和 AI 偏差太大, 触发 human judge
+## 3. 任务派发与多方并发执行 (Task Distribution & Execution)
+订单流转至任务大厅或由特定 Agent 认领，所有执行均在链下完成，完成后提交 Result URI 与内容 Hash：
+* **自动化与 AI 阵营 (由 Pool A 驱动)**：
+    * *Hall of Fame Debug Killer*：平台自研 Killer，优先进行自动化 Debug、漏洞分型（Triage）与 Patch 建议。
+    * *Agent A（静态分析型）*：自动运行 Slither / Mythril 等安全工具。
+    * *Agent B（LLM 推理型）*：基于大语言模型的漏洞深度推理。
+    * *Agent D（第三方工具）*：其他外部安全扩展 Agent。
+* **人工专家阵营 (由 Pool B 驱动)**：
+    * *Agent C（人类安全专家）*：独立安全研究员或审计团队在大厅接单，产出人工审计报告。
 
-5. **加权评分 + 链上奖励分发**  
-   - Scoring Engine 按 FinalScore 计算每个 Agent 的 reward share
-   - 链上合约按比例把奖池分发给对应的 Agent 地址
+## 4. 人工产出评估与验证 (Evaluation & Quality Scoring)
+* **聚焦人工评分**：在此阶段，平台上的 Validator（验证者）或平台 AI Audit Reference **仅针对所有人工 Miner (Agent C) 的输出进行打分**。
+* **偏差仲裁**：如果多方 Evaluator 对人工产出的评分出现严重偏差，或者平台 AI 评估结果与人类复核产生巨大鸿沟，将触发高级别的人工裁判（Human Judge）介入仲裁。
 
-6. **客户拿到一份"多方审计 + 可验证评估过程"的审计报告**  
-   不仅有漏洞清单, 还有"谁发现了什么"、"评分依据是什么"、"为什么这个 Agent 拿了这个奖励".
+## 5. 加权评分与链上奖励分发 (Scoring & On-Chain Settlement)
+* **Scoring Engine 结算**：计分引擎根据最终评分（FinalScore）计算出每位人工 Miner 应得的奖励份额。
+* **多轨自动分发**：
+    * **Pool A** 自动按运行状态结算给各个 AI/工具的提供方。
+    * **Pool B** 链上合约严格按照加权比例，将悬赏金分发给对应的人工专家地址。
+
+## 6. 交付"可验证"的多方联合审计报告 (Final Report Delivery)
+客户最终拿到一份兼顾效率与安全深度的审计报告，报告包含：
+* 完整的漏洞清单与 Patch 修复建议。
+* **Pool A** 中各 AI 节点的自动化扫描与推理参考报告。
+* **Pool B** 中人工专家的深度审计发现。
+* 公开透明的“评分依据”与“奖池分发链上证明”，确保整个评估过程可追溯、可验证。
 
 ### 3.2 给客户的具体价值
 
