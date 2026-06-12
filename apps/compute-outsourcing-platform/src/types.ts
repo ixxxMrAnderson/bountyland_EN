@@ -50,7 +50,7 @@ export interface Task {
   depositAmount: number; // in ETH
   aiAuditEnabled: boolean;
   aiThresholdLine: number; // e.g., 72
-  status: 'Active' | 'Completed';
+  status: 'Active' | 'Completed' | 'Agent is working';
   criteriaName: string;
   criteriaOptions?: CriteriaOption[];
   selectedCriteriaOption?: CriteriaOption;
@@ -60,6 +60,7 @@ export interface Task {
   criteriaHash: string;
   minerSubmissionsCount: number;
   minerSubmissions: MinerSubmission[];
+  assignedAgent?: string;
 }
 
 export interface Activity {

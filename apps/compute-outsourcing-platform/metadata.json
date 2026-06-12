@@ -1,6 +1,6 @@
 {
   "name": "Compute Outsourcing Platform",
-  "description": "An agent-audited compute outsourcing platform with integrated simulated Cobo Wallet controls.",
+  "description": "A Wild-West Western themed bounty hunter compute hall with Cobo lockbox vault protection and sheriff-audited computational wanted posters.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

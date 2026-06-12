@@ -4,18 +4,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Users, RefreshCw } from 'lucide-react';
+import { Target, RefreshCw } from 'lucide-react';
 import { useTranslation } from '../locales';
 
 export const NetworkStatsWidget: React.FC = () => {
   const { t, locale } = useTranslation();
   
-  // Real-time fluctuating state variable
-  const [activeMiners, setActiveMiners] = useState(1424);   // Nodes count
+  // Real-time fluctuating state variable representing bounty hunters saddled up
+  const [activeMiners, setActiveMiners] = useState(1424);   
   const [isRotatingRing, setIsRotatingRing] = useState(false);
 
   useEffect(() => {
-    // Dynamic micro-changes simulating workers joining and leaving the peer network
     const interval = setInterval(() => {
       setActiveMiners((prev) => {
         const change = Math.random() > 0.65 ? (Math.random() > 0.5 ? 1 : -1) : 0;
@@ -30,45 +29,42 @@ export const NetworkStatsWidget: React.FC = () => {
   }, []);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl hover:border-slate-750 transition duration-300 relative overflow-hidden select-none">
-      
-      {/* Background subtle network grid decoration */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:16px_16px] opacity-10 pointer-events-none"></div>
+    <div className="bg-[#150f0c] border-[#4a3427] border-2 rounded px-4 py-3 shadow-md hover:border-[#8e5c3c] transition duration-300 relative overflow-hidden select-none outline outline-1 outline-offset-4 outline-[#4a3427]/20">
       
       {/* Widget Header with live status beacon */}
-      <div className="flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-            <Users className="w-4 h-4 text-brand-cyan shrink-0 animate-pulse" />
+      <div className="flex items-center justify-between relative z-10 border-b border-dashed border-[#4a3427]/30 pb-2 mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-[#2a1d15] flex items-center justify-center border border-[#4a3427]">
+            <Target className="w-4 h-4 text-[#dfab6c] shrink-0" />
           </div>
           <div>
-            <h4 className="font-display font-medium text-xs tracking-wide text-slate-300">
-              {t('platformActiveMiners') || 'Active Miners Online'}
+            <h4 className="font-serif font-black text-xs tracking-wide text-[#dfab6c] uppercase">
+              {locale === 'zh' ? '算力节点同步率' : 'Decentralized Miners'}
             </h4>
             <div className="flex items-center gap-1 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-cyan animate-ping shrink-0"></span>
-              <span className="text-[9px] text-slate-500 font-mono font-bold uppercase tracking-wider">
-                {locale === 'zh' ? '算网节点秒级同步中' : 'WORKER CONTEXT LIVE'}
+              <span className="w-1 h-1 rounded-full bg-[#849c44] animate-pulse shrink-0"></span>
+              <span className="text-[8.5px] text-[#8e7564] font-mono uppercase tracking-wider font-bold">
+                {locale === 'zh' ? '去中心化网络算力同步中' : 'DECENTRALIZED SYNCED'}
               </span>
             </div>
           </div>
         </div>
         
         <button 
-          title="Sync Node Status" 
-          className="text-slate-500 hover:text-slate-350 transition duration-150 p-1"
+          title="Sync Compute Network" 
+          className="text-[#8e7564] hover:text-[#dfab6c] transition duration-150 p-1"
         >
-          <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${isRotatingRing ? 'animate-spin text-brand-cyan' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isRotatingRing ? 'animate-spin text-[#dfab6c]' : ''}`} />
         </button>
       </div>
 
       {/* Hero layout of the Metric */}
-      <div className="mt-4 flex items-baseline gap-2 relative z-10 pl-1">
-        <span className="text-3xl font-extrabold font-mono text-white tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+      <div className="mt-2 flex items-baseline gap-1.5 relative z-10 pl-1">
+        <span className="text-2xl font-serif font-black text-[#dfab6c] tracking-tight">
           {activeMiners}
         </span>
-        <span className="text-xs text-slate-500 font-bold font-mono">
-          {locale === 'zh' ? '个活跃算力节点' : 'Nodes Active'}
+        <span className="text-[8.5px] text-[#8e7564] uppercase font-bold font-mono">
+          {locale === 'zh' ? '个活跃外部计算节点' : 'Active Nodes Registered'}
         </span>
       </div>
 
