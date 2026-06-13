@@ -181,6 +181,20 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
     window.addEventListener('mousedown', mouseDownHandler);
     window.addEventListener('mouseup', mouseUpHandler);
 
+    // If a click removes the active target from the DOM (e.g. a modal close
+    // button that unmounts), its `mouseleave` never fires and the cursor would
+    // stay locked. Detect the detachment on the next frame and reset manually.
+    const clickHandler = () => {
+      requestAnimationFrame(() => {
+        if (activeTarget && !activeTarget.isConnected) {
+          currentLeaveHandler?.();
+        }
+      });
+    };
+    // Capture phase: runs from window downward BEFORE any deeper
+    // stopPropagation (e.g. a modal's content wrapper) can swallow the event.
+    window.addEventListener('click', clickHandler, true);
+
     const enterHandler = (e: MouseEvent) => {
       const directTarget = e.target as Element;
       const allTargets: Element[] = [];
@@ -299,6 +313,7 @@ const TargetCursor: React.FC<TargetCursorProps> = ({
       window.removeEventListener('resize', resizeHandler);
       window.removeEventListener('mousedown', mouseDownHandler);
       window.removeEventListener('mouseup', mouseUpHandler);
+      window.removeEventListener('click', clickHandler, true);
       if (activeTarget) {
         cleanupTarget(activeTarget);
       }
