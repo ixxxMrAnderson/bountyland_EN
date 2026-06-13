@@ -62,6 +62,9 @@ import { useTranslation, getLocalizedTask, getLocalizedTaskTitle, getLocalizedCr
 import { intakeDebug, executeDebug } from './services/agentApi';
 import type { ExecuteResponse } from './services/agentApi';
 import { connectWallet, disconnectWallet, refreshBalance, onAccountsChanged, onChainChanged } from './services/walletService';
+import { createTaskOnChain } from './services/contractService';
+import type { CreateTaskResult } from './services/contractService';
+import { ethers } from 'ethers';
 import introBackground from '../../../img/intro_page_concept.png';
 import debugAgentAvatar from '../../../img/agent_avatar_matrix.png';
 import dataAgentAvatar from '../../../img/agent_avatar_cyberpunk.png';
@@ -270,9 +273,10 @@ export default function App() {
 
   // Submit and loading lifecycle parameters
   const [formSubmittingStage, setFormSubmittingStage] = useState<
-    'none' | 'analyzing' | 'proposal_ready' | 'agent_intake' | 'agent_need_info' | 'agent_executing' | 'completed_download'
+    'none' | 'analyzing' | 'proposal_ready' | 'deploying_contract' | 'agent_intake' | 'agent_need_info' | 'agent_executing' | 'completed_download'
   >('none');
   const [draftedProposal, setDraftedProposal] = useState<any>(null);
+  const [contractResult, setContractResult] = useState<CreateTaskResult | null>(null);
   const [agentResult, setAgentResult] = useState<ExecuteResponse | null>(null);
   const [agentError, setAgentError] = useState<string | null>(null);
   const [agentMissingFields, setAgentMissingFields] = useState<string[]>([]);
@@ -537,16 +541,71 @@ export default function App() {
   const handleAgentDeploy = async () => {
     if (!draftedProposal || draftedProposal.type !== 'web3') return;
 
+    // Require wallet connection
+    if (!wallet.connected) {
+      triggerAlarm('error', locale === 'zh' ? '请先连接 MetaMask 钱包' : 'Please connect MetaMask wallet first');
+      return;
+    }
+
     const userInput = buildDebugUserInput();
     const bounty = parseFloat(web3Bounty) || 0.15;
 
-    // Reset previous agent state
+    // Reset previous state
+    setContractResult(null);
     setAgentResult(null);
     setAgentError(null);
     setAgentMissingFields([]);
     setAgentMessage(null);
 
-    // Phase 1 — intake
+    // ── Phase 0: On-chain escrow ──
+    setFormSubmittingStage('deploying_contract');
+
+    // Build contract parameters from form data
+    const SLA_HOURS: Record<string, number> = {
+      '12 Hours': 12 * 3600,
+      '24 Hours': 24 * 3600,
+      '48 Hours': 48 * 3600,
+    };
+    const deadline = Math.floor(Date.now() / 1000) + (SLA_HOURS[web3Urgency] || 24 * 3600);
+    const criteriaJSON = JSON.stringify({
+      task: draftedProposal.title,
+      repo: web3RepoUrl,
+      issueType: web3IssueType,
+      vm: web3VMType,
+      deliverables: web3Deliverables,
+    });
+    const criteriaHashBytes32 = ethers.keccak256(ethers.toUtf8Bytes(criteriaJSON));
+
+    try {
+      const chainResult = await createTaskOnChain({
+        taskURI: `data:application/json,${encodeURIComponent(JSON.stringify({ title: draftedProposal.title, repo: web3RepoUrl, issueType: web3IssueType, vm: web3VMType, description: draftedProposal.description }))}`,
+        orderURI: `data:application/json,${encodeURIComponent(JSON.stringify({ deliverables: web3Deliverables, outputFormat: draftedProposal.outputFormat, criteria: criteriaJSON }))}`,
+        criteriaHash: criteriaHashBytes32,
+        deadline,
+        rewardPoolEth: bounty,
+      });
+
+      setContractResult(chainResult);
+      triggerAlarm(
+        'success',
+        locale === 'zh'
+          ? `链上托管成功！Task #${chainResult.taskId} 已创建，${bounty} ETH 已存入合约`
+          : `Escrow locked! Task #${chainResult.taskId} created, ${bounty} ETH deposited on-chain`,
+      );
+    } catch (chainErr: any) {
+      // Re-throw user-rejected errors, otherwise show message and stop
+      if (chainErr?.code === 'ACTION_REJECTED' || chainErr?.message?.includes('user rejected')) {
+        triggerAlarm('alert', locale === 'zh' ? 'MetaMask 交易已取消' : 'MetaMask transaction cancelled');
+        setFormSubmittingStage('proposal_ready');
+        return;
+      }
+      setAgentError(chainErr?.message || String(chainErr));
+      triggerAlarm('error', locale === 'zh' ? `链上托管失败: ${chainErr?.message || '未知错误'}` : `On-chain escrow failed: ${chainErr?.message || 'Unknown error'}`);
+      setFormSubmittingStage('proposal_ready');
+      return;
+    }
+
+    // ── Phase 1: Agent intake ──
     setFormSubmittingStage('agent_intake');
     try {
       const intake = await intakeDebug(userInput);
@@ -1841,6 +1900,28 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Phase 0: On-chain escrow via MetaMask */}
+                    {formSubmittingStage === 'deploying_contract' && (
+                      <div className="bg-[#150f0c] border-2 border-[#dfab6c]/40 p-8 rounded text-center space-y-4 animate-pulse">
+                        <Coins className="w-10 h-10 text-[#dfab6c] mx-auto animate-spin" />
+                        <div className="space-y-1.5">
+                          <h4 className="font-serif font-black text-sm text-[#dfab6c] uppercase">
+                            {locale === 'zh' ? 'MetaMask 链上托管确认中...' : 'Confirming On-Chain Escrow...'}
+                          </h4>
+                          <p className="text-[11px] text-[#8e7564] font-mono">
+                            {locale === 'zh'
+                              ? `正在将 ${web3Bounty} ETH 存入智能合约托管池，请在 MetaMask 弹窗中确认交易。`
+                              : `Depositing ${web3Bounty} ETH into the smart contract escrow pool. Please confirm the transaction in MetaMask.`}
+                          </p>
+                          <p className="text-[10px] text-[#8e7564]/60 font-mono">
+                            {locale === 'zh'
+                              ? '合约地址: 0xD64381...7339 (Sepolia)'
+                              : 'Contract: 0xD64381...7339 (Sepolia)'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Agent Phase 1: Intake — validating task requirements */}
                     {formSubmittingStage === 'agent_intake' && (
                       <div className="bg-[#150f0c] border-2 border-[#4a3427] p-8 rounded text-center space-y-4 animate-pulse">
@@ -1942,6 +2023,29 @@ export default function App() {
                             </p>
                           </div>
                         </div>
+
+                        {/* ── On-chain Escrow Result ── */}
+                        {contractResult && (
+                          <div className="bg-[#150f0c] border border-[#dfab6c]/40 p-4 rounded space-y-2.5">
+                            <h5 className="font-mono text-[10px] text-[#dfab6c] uppercase font-black tracking-wider">
+                              {locale === 'zh' ? '▎链上托管信息 (Sepolia)' : '▎ON-CHAIN ESCROW (Sepolia)'}
+                            </h5>
+                            <div className="grid grid-cols-2 gap-3 text-[10px] font-mono">
+                              <div className="bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                <span className="text-[#8e7564] block">{locale === 'zh' ? '链上 Task ID' : 'On-Chain Task ID'}</span>
+                                <span className="text-[#ebdcb9] font-bold">#{contractResult.taskId}</span>
+                              </div>
+                              <div className="bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                <span className="text-[#8e7564] block">{locale === 'zh' ? '托管金额' : 'Escrow Amount'}</span>
+                                <span className="text-[#849c44] font-bold">{contractResult.rewardPool} ETH</span>
+                              </div>
+                              <div className="col-span-2 bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                <span className="text-[#8e7564] block">{locale === 'zh' ? '交易哈希' : 'Tx Hash'}</span>
+                                <span className="text-[#ebdcb9] font-bold text-[9px] break-all">{contractResult.txHash}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                         {/* ── Real Agent Results (when available) ── */}
                         {agentResult && agentResult.execution && (
