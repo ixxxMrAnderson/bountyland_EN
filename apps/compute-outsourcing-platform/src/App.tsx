@@ -59,9 +59,65 @@ import {
 } from './types';
 
 import { useTranslation, getLocalizedTask, getLocalizedTaskTitle, getLocalizedCriteria } from './locales';
+import introBackground from '../../../img/intro_page_concept.png';
+
+interface IntroLandingProps {
+  locale: 'en' | 'zh';
+  onLogin: () => void;
+  onToggleLanguage: () => void;
+}
+
+const IntroLanding: React.FC<IntroLandingProps> = ({ locale, onLogin, onToggleLanguage }) => {
+  return (
+    <main className="relative min-h-screen overflow-hidden bg-[#080504] text-[#f4e5c3]">
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${introBackground})` }}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,3,2,0.78)_0%,rgba(5,3,2,0.34)_48%,rgba(5,3,2,0.12)_100%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#070403] via-[#070403]/45 to-transparent" />
+
+      <button
+        type="button"
+        onClick={onToggleLanguage}
+        className="absolute right-6 top-6 z-20 h-10 px-4 border border-[#e0ad71]/45 bg-[#100907]/75 text-[#f0c384] hover:bg-[#1a100c] hover:border-[#f0c384] transition font-mono text-xs font-bold tracking-[0.18em]"
+      >
+        {locale === 'en' ? '中文' : 'EN'}
+      </button>
+
+      <section className="relative z-10 flex min-h-screen w-full items-center justify-center px-8 sm:px-14 lg:px-24">
+        <div className="flex w-full max-w-5xl flex-col items-center pt-20 text-center">
+          <div className="mb-7 h-1 w-24 bg-[#c43b25]" />
+          <h1 className="text-[clamp(1.9rem,4.25vw,4.65rem)] font-normal uppercase leading-none tracking-[0.58em] text-[#f3d4a0]/52 drop-shadow-[0_9px_34px_rgba(0,0,0,0.62)] [font-family:'Copperplate','Copperplate_Gothic_Light','Cinzel',serif]">
+            BountyLand
+          </h1>
+          <div className="mt-14 flex flex-col items-center justify-center gap-8 sm:flex-row sm:gap-36">
+            <button
+              type="button"
+              className="h-8 min-w-24 border border-[#e0ad71]/20 bg-[#130b08]/28 px-5 text-center font-display text-[8px] font-normal uppercase tracking-[0.46em] text-[#e7bd7d]/48 transition hover:border-[#f0c384]/55 hover:bg-[#21140f]/45 hover:text-[#f0c384]/78"
+            >
+              About
+            </button>
+            <button
+              type="button"
+              onClick={onLogin}
+              className="group h-8 min-w-24 border border-[#912a19]/34 bg-[#bf311d]/42 px-5 text-center font-display text-[8px] font-normal uppercase tracking-[0.46em] text-white/52 shadow-[0_14px_32px_rgba(191,49,29,0.08)] transition hover:bg-[#a92918]/68 hover:text-white/82"
+            >
+              <span className="inline-flex items-center justify-center gap-3">
+                Login
+                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+              </span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+};
 
 export default function App() {
   const { t, locale, setLanguage } = useTranslation();
+  const [showLanding, setShowLanding] = useState(true);
   
   // Authenticated Developer Profile State
   const [user, setUser] = useState<{ email: string; initials: string; walletAddress?: string } | null>(() => {
@@ -96,6 +152,7 @@ export default function App() {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('zai_logged_user');
+    setShowLanding(true);
     triggerAlarm('success', locale === 'zh' ? '成功安全退出登录。' : 'Successfully logged out safely.');
   };
 
@@ -839,6 +896,30 @@ export default function App() {
     }, 1500);
   };
 
+  if (showLanding) {
+    return (
+      <IntroLanding
+        locale={locale}
+        onLogin={() => {
+          setUser(null);
+          localStorage.removeItem('zai_logged_user');
+          setShowLanding(false);
+        }}
+        onToggleLanguage={() => setLanguage(locale === 'en' ? 'zh' : 'en')}
+      />
+    );
+  }
+
+  if (!user) {
+    return (
+      <AuthPanel
+        initialShowIntro={false}
+        onBackToIntro={() => setShowLanding(true)}
+        onAuthSuccess={handleAuthSuccess}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-dark-bg font-sans flex flex-col antialiased text-[#ebdcb9]">
       
@@ -860,13 +941,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Unauthenticated Security Session Guard Interception */}
-      {!user ? (
-        <AuthPanel onAuthSuccess={handleAuthSuccess} />
-      ) : (
-        <>
-          {/* Main Container Layout */}
-          <div className="flex-1 flex max-w-[1440px] w-full mx-auto relative divide-x divide-amber-950/20 min-h-screen">
+      {/* Main Container Layout */}
+      <div className="flex-1 flex max-w-[1440px] w-full mx-auto relative divide-x divide-amber-950/20 min-h-screen">
         
         {/* ================= LEFT SIDEBAR PANEL ================= */}
         <div className="hidden md:flex w-72 lg:w-80 flex-col justify-between p-6 bg-[#0f0a08] shrink-0 gap-6 border-r border-[#4a3427]/40">
@@ -940,7 +1016,7 @@ export default function App() {
               >
                 <div className="flex items-center gap-2.5">
                   <Bot className={`w-4 h-4 shrink-0 transition ${activeTab === 'PlatformAgents' ? 'text-[#dfab6c]' : 'text-[#8e5c3c] group-hover:text-[#dfab6c]'}`} />
-                  {locale === 'zh' ? '智算警员 & 哨兵' : 'Autonomous Sheriffs'}
+                  {locale === 'zh' ? '杀手 Agent 名人堂' : 'Hall of Killer Agents'}
                 </div>
                 <ChevronRight className={`w-3.5 h-3.5 transition ${activeTab === 'PlatformAgents' ? 'translate-x-0.5 text-[#dfab6c]' : 'text-[#4a3427] group-hover:text-[#8e5c3c]'}`} />
               </button>
@@ -2580,97 +2656,6 @@ export default function App() {
           />
         );
       })()}
-
-      {/* 5. Modal: Custom Modify Modal */}
-      {modifyingTask && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#eee1c9] border-4 border-[#3e291b] rounded-lg max-w-lg w-full p-6 relative shadow-2xl select-none outline outline-1 outline-offset-4 outline-[#eee1c9]/45">
-            {/* Stamp decoration */}
-            <div className="absolute right-4 top-4 border-2 border-dashed border-[#bf311d]/40 text-[#bf311d]/50 text-[9px] font-mono uppercase tracking-widest font-black px-2 py-0.5 rounded -rotate-6">
-              {locale === 'zh' ? '多签重构' : 'PACT AMEND'}
-            </div>
-
-            <div className="font-serif border-b-2 border-[#543b27]/20 border-dotted pb-3 mb-4 text-center">
-              <h3 className="text-xl font-black text-[#2e1c12] tracking-wider uppercase font-serif">
-                {locale === 'zh' ? '★ 修改算力需求契约 ★' : '★ AMEND COMPUTE WARRANT ★'}
-              </h3>
-              <p className="text-[10px] text-[#8e5c3c] tracking-widest uppercase font-mono mt-1">
-                {locale === 'zh' ? '重置并更新智能托管契约参数' : 're-negotiate smart escrow conditions'}
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveModifiedDemand} className="space-y-4">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-mono uppercase text-[#5c493c] font-black">
-                  {locale === 'zh' ? '悬赏订单标题 / WARRANT TITLE' : 'Warrant Title'}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={modifyTitle}
-                  onChange={(e) => setModifyTitle(e.target.value)}
-                  className="w-full bg-[#faecd1] border-2 border-[#543b27]/40 text-xs text-[#2e1c12] font-mono px-3 py-2 rounded focus:outline-none focus:border-[#a82a18] font-bold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-mono uppercase text-[#5c493c] font-black">
-                  {locale === 'zh' ? '外包技术需求描述 / SPECIFICATION' : 'Warrant Specification'}
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={modifyDescription}
-                  onChange={(e) => setModifyDescription(e.target.value)}
-                  className="w-full bg-[#faecd1] border-2 border-[#543b27]/40 text-xs text-[#2e1c12] font-sans px-3 py-2 rounded focus:outline-none focus:border-[#a82a18] resize-none leading-relaxed font-semibold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-mono uppercase text-[#5c493c] font-black flex justify-between">
-                  <span>{locale === 'zh' ? '悬赏金储备 (ETH) / COGNITIVE ESCROW BOUNTY' : 'Warrant Bounty (ETH)'}</span>
-                  <span className="text-[#a82a18] font-mono font-bold">{locale === 'zh' ? '账户余额: ' : 'Wallet balance: '}{wallet.balance.toFixed(4)} ETH</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="0.001"
-                    min="0.01"
-                    required
-                    value={modifyBounty}
-                    onChange={(e) => setModifyBounty(e.target.value)}
-                    className="w-full bg-[#faecd1] border-2 border-[#543b27]/40 text-xs text-[#2e1c12] font-mono px-3 py-2 rounded focus:outline-none focus:border-[#a82a18] font-black"
-                  />
-                  <span className="absolute right-3 top-2 text-[10px] font-mono text-[#5c493c] font-bold">ETH</span>
-                </div>
-                <p className="text-[9px] text-[#8e5c3c] font-serif leading-normal mt-1">
-                  {locale === 'zh' 
-                    ? '补充契约预算将会从您的 MetaMask 钱包追加锁存；减少预算时多余的质押金则会实时退款。' 
-                    : 'Increasing will pull extra funds from Metamask; decreasing will refund the difference instantly.'}
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-3 border-t-2 border-[#543b27]/20 border-dotted mt-4">
-                <button
-                  type="button"
-                  onClick={() => setModifyingTask(null)}
-                  className="flex-1 py-2 bg-[#eae0cb] hover:bg-[#e1d5bd] text-[#5c493c] font-serif font-black text-[11px] rounded border border-[#bfae94] transition cursor-pointer transition-all duration-200"
-                >
-                  {locale === 'zh' ? '放弃修改' : 'CANCEL AMENDMENT'}
-                </button>
-
-                <button
-                  type="submit"
-                  className="flex-1 py-2 bg-[#9e331b] hover:bg-[#b03d27] text-[#eee1c9] font-serif font-black text-[11px] rounded shadow-md cursor-pointer transition-all duration-300 border border-[#6e2211]"
-                >
-                  {locale === 'zh' ? '签订并部署更新' : 'SIGN & DEPLOY MOD'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
         </>
       )}
