@@ -71,6 +71,11 @@ interface IntroLandingProps {
 }
 
 const IntroLanding: React.FC<IntroLandingProps> = ({ locale, onLogin, onToggleLanguage }) => {
+  const [showAbout, setShowAbout] = useState(false);
+  const aboutText = locale === 'zh'
+    ? '在十九世纪的美国大西部，Bounty Land 是悬赏令、赏金猎手、职业杀手和执法者交汇的地方：有人挂出通缉与赎金，有人接下追捕与清算，执法部门负责监督秩序。在我们的项目里，每一张悬赏令都是一个计算任务。用户既可以调用平台提供的职业杀手 Agent 直接解决任务，也可以把任务发布到公开市场，让其他人工用户接单、提交结果并领取奖励；验证者则像执法部门一样审查工作，保证最终结算可信。'
+    : 'On the 19th-century American frontier, Bounty Land was where wanted posters, reward money, bounty hunters, hired killers, and law enforcement met: someone posted the bounty, someone tracked the target, and sheriffs kept order. In our project, each wanted poster becomes a compute task. Users can ask platform-provided killer agents to solve the job directly, or post the bounty to the open market so human workers can take it, submit results, and earn rewards, while validators act as law enforcement to review the work and keep settlement fair.';
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#080504] text-[#f4e5c3]">
       <div
@@ -97,6 +102,7 @@ const IntroLanding: React.FC<IntroLandingProps> = ({ locale, onLogin, onToggleLa
           <div className="mt-14 flex flex-col items-center justify-center gap-8 sm:flex-row sm:gap-36">
             <button
               type="button"
+              onClick={() => setShowAbout(true)}
               className="h-8 min-w-24 border border-[#e0ad71]/20 bg-[#130b08]/28 px-5 text-center font-display text-[8px] font-normal uppercase tracking-[0.46em] text-[#e7bd7d]/48 transition hover:border-[#f0c384]/55 hover:bg-[#21140f]/45 hover:text-[#f0c384]/78"
             >
               About
@@ -114,6 +120,42 @@ const IntroLanding: React.FC<IntroLandingProps> = ({ locale, onLogin, onToggleLa
           </div>
         </div>
       </section>
+
+      {showAbout && (
+        <div
+          className="fixed inset-0 z-30 flex items-center justify-center bg-[#050302]/35 px-6 backdrop-blur-[2px]"
+          onClick={() => setShowAbout(false)}
+        >
+          <div
+            className="relative w-full max-w-2xl border border-[#e0ad71]/20 bg-[#100806]/45 px-7 py-7 shadow-[0_30px_90px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:px-9 sm:py-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowAbout(false)}
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center border border-[#e0ad71]/18 bg-[#160d09]/35 text-[#f3d4a0]/50 transition hover:border-[#f3d4a0]/45 hover:text-[#f3d4a0]/80"
+              aria-label={locale === 'zh' ? '关闭介绍' : 'Close about'}
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="mb-5 h-px w-20 bg-[#c43b25]/55" />
+            <h2 className="mb-5 font-sans text-sm font-semibold uppercase tracking-[0.34em] text-[#f3d4a0]/68">
+              {locale === 'zh' ? 'About BountyLand' : 'About BountyLand'}
+            </h2>
+            <p
+              className="select-text text-[12.5px] leading-7 text-[#f6dfb5]/58 sm:text-[13.5px] sm:leading-8"
+              style={{
+                fontFamily: locale === 'zh'
+                  ? '"KaiTi", "STKaiti", "Kaiti SC", "楷体", serif'
+                  : '"Times New Roman", Times, serif',
+                letterSpacing: locale === 'zh' ? '0.08em' : '0.045em',
+              }}
+            >
+              {aboutText}
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
