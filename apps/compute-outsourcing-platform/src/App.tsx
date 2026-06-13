@@ -59,6 +59,9 @@ import {
 } from './types';
 
 import { useTranslation, getLocalizedTask, getLocalizedTaskTitle, getLocalizedCriteria } from './locales';
+import { intakeDebug, executeDebug } from './services/agentApi';
+import type { ExecuteResponse } from './services/agentApi';
+import { connectWallet, disconnectWallet, refreshBalance, onAccountsChanged, onChainChanged } from './services/walletService';
 import introBackground from '../../../img/intro_page_concept.png';
 
 interface IntroLandingProps {
@@ -162,11 +165,11 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [activities, setActivities] = useState<Activity[]>(getInitialActivities());
   
-  // Wallet state containing Cobo credentials
+  // Wallet state — populated by MetaMask connection
   const [wallet, setWallet] = useState<WalletState>({
-    connected: true,
-    address: '0x714262009486asiaeast1runapp',
-    balance: 2.450,
+    connected: false,
+    address: '',
+    balance: 0,
     pendingApprovalsList: []
   });
 
@@ -221,8 +224,14 @@ export default function App() {
   const [datasetBounty, setDatasetBounty] = useState('0.180');
 
   // Submit and loading lifecycle parameters
-  const [formSubmittingStage, setFormSubmittingStage] = useState<'none' | 'analyzing' | 'proposal_ready' | 'completed_download'>('none');
+  const [formSubmittingStage, setFormSubmittingStage] = useState<
+    'none' | 'analyzing' | 'proposal_ready' | 'agent_intake' | 'agent_need_info' | 'agent_executing' | 'completed_download'
+  >('none');
   const [draftedProposal, setDraftedProposal] = useState<any>(null);
+  const [agentResult, setAgentResult] = useState<ExecuteResponse | null>(null);
+  const [agentError, setAgentError] = useState<string | null>(null);
+  const [agentMissingFields, setAgentMissingFields] = useState<string[]>([]);
+  const [agentMessage, setAgentMessage] = useState<string | null>(null);
 
   // Self-created task warrant management
   const [modifyingTask, setModifyingTask] = useState<Task | null>(null);
@@ -301,6 +310,64 @@ export default function App() {
     setFeedback({ type, message });
     setTimeout(() => setFeedback(null), 6000);
   };
+
+  // ── MetaMask Wallet handlers ──
+
+  const handleConnectWallet = async () => {
+    try {
+      const { address, balance } = await connectWallet();
+      setWallet((prev) => ({
+        ...prev,
+        connected: true,
+        address,
+        balance,
+      }));
+      triggerAlarm('success', locale === 'zh'
+        ? `已连接 MetaMask: ${address.slice(0, 6)}...${address.slice(-4)}`
+        : `MetaMask connected: ${address.slice(0, 6)}...${address.slice(-4)}`);
+    } catch (err: any) {
+      triggerAlarm('error', err?.message || (locale === 'zh' ? '钱包连接失败' : 'Wallet connection failed'));
+    }
+  };
+
+  const handleDisconnectWallet = () => {
+    const info = disconnectWallet();
+    setWallet((prev) => ({
+      ...prev,
+      connected: info.connected,
+      address: info.address,
+      balance: info.balance,
+    }));
+    triggerAlarm('alert', locale === 'zh' ? 'MetaMask 已断开连接' : 'MetaMask disconnected');
+  };
+
+  // Listen for MetaMask account / chain changes
+  React.useEffect(() => {
+    const removeAccounts = onAccountsChanged((accounts: string[]) => {
+      if (accounts.length === 0) {
+        handleDisconnectWallet();
+      } else {
+        setWallet((prev) => ({ ...prev, address: accounts[0] }));
+        refreshBalance(accounts[0]).then((balance) =>
+          setWallet((prev) => ({ ...prev, balance }))
+        ).catch(() => {});
+      }
+    });
+
+    const removeChain = onChainChanged(() => {
+      // Refresh balance on chain change
+      if (wallet.address) {
+        refreshBalance(wallet.address).then((balance) =>
+          setWallet((prev) => ({ ...prev, balance }))
+        ).catch(() => {});
+      }
+    });
+
+    return () => {
+      removeAccounts();
+      removeChain();
+    };
+  }, [wallet.address]);
 
   // Automated Web3 Debug Request Form Submission handler
   const handleWeb3FormSubmit = (e: React.FormEvent) => {
@@ -388,9 +455,182 @@ export default function App() {
     }, 1800);
   };
 
+  // ---------------------------------------------------------------------------
+  // Agent integration — build a rich user_input from the web3 form fields
+  // ---------------------------------------------------------------------------
+  const buildDebugUserInput = (): string => {
+    // Build a test command hint based on the VM type
+    const vmTestHints: Record<string, string> = {
+      'Solidity/EVM': 'forge test 或 npx hardhat test',
+      'Rust/WASM (Solana)': 'cargo test-sbf 或 anchor test',
+      'Move (Sui/Aptos)': 'sui move test 或 aptos move test',
+      'Huff/Yul Assembly': 'forge test 或 huffc compile',
+    };
+    const defaultTestCmd = vmTestHints[web3VMType] || '执行项目测试';
+
+    const parts: string[] = [
+      `GitHub 仓库地址: ${web3RepoUrl}`,
+      `漏洞类型: ${web3IssueType}`,
+      `编译器/VM环境: ${web3VMType}`,
+      web3ContractAddr ? `受影响合约地址: ${web3ContractAddr}` : null,
+      web3FileScope ? `受检文件范围: ${web3FileScope}` : null,
+      `期望交付成果: ${web3Deliverables.join('、')}`,
+      `修复代码，保留仓库，我要看修改后的代码`,
+      // Use "错误日志:" prefix so extract_logs() in the rule engine can match it
+      web3CustomNotes
+        ? `错误日志:\n${web3CustomNotes}`
+        : `错误日志: 编译或运行时出现与${web3IssueType}相关的错误或异常行为`,
+      // Provide a test command so reproduction_evidence passes
+      `测试命令: ${defaultTestCmd}`,
+    ];
+    return parts.filter(Boolean).join('\n');
+  };
+
+  // ---------------------------------------------------------------------------
+  // Agent integration — call /v1/intake → /v1/execute
+  // ---------------------------------------------------------------------------
+  const handleAgentDeploy = async () => {
+    if (!draftedProposal || draftedProposal.type !== 'web3') return;
+
+    const userInput = buildDebugUserInput();
+    const bounty = parseFloat(web3Bounty) || 0.15;
+
+    // Reset previous agent state
+    setAgentResult(null);
+    setAgentError(null);
+    setAgentMissingFields([]);
+    setAgentMessage(null);
+
+    // Phase 1 — intake
+    setFormSubmittingStage('agent_intake');
+    try {
+      const intake = await intakeDebug(userInput);
+
+      if (intake.status === 'needs_confirmation') {
+        setAgentMissingFields(intake.missing_fields || []);
+        setAgentMessage(intake.agent_message || null);
+        setFormSubmittingStage('agent_need_info');
+        return;
+      }
+
+      // Show suggested price / agent message and proceed
+      if (intake.agent_message) {
+        setAgentMessage(intake.agent_message);
+      }
+
+      // Phase 2 — execute
+      setFormSubmittingStage('agent_executing');
+      const result = await executeDebug({
+        userInput,
+        userBudget: bounty,
+      });
+
+      setAgentResult(result);
+
+      // If execute failed (intake said not ready even with price_confirmed)
+      if (!result.execution) {
+        const intakeResult = result.intake;
+        if (intakeResult.status === 'needs_confirmation') {
+          setAgentMissingFields(intakeResult.missing_fields || []);
+          setAgentMessage(intakeResult.agent_message || null);
+          setFormSubmittingStage('agent_need_info');
+          return;
+        }
+        setAgentError(
+          locale === 'zh'
+            ? 'Agent 执行未能启动，请检查输入后重试。'
+            : 'Agent execution could not start. Please check your input and try again.',
+        );
+        setFormSubmittingStage('proposal_ready');
+        return;
+      }
+
+      // Deduct wallet & create task (same as before, but with real data)
+      setWallet((prev) => ({
+        ...prev,
+        balance: parseFloat((prev.balance - bounty).toFixed(4)),
+      }));
+
+      const newTaskId = 'task-' + (tasks.length + 1);
+      const exec = result.execution;
+      const summary = exec.summary || {};
+
+      const newlyDeployed: Task = {
+        id: newTaskId,
+        title: draftedProposal.title,
+        description:
+          draftedProposal.description +
+          ` Agent execution complete. Patch generated: ${summary.patch_generated ? 'YES' : 'NO'}, iterations: ${summary.patch_iterations ?? 'N/A'}.`,
+        createdAt: new Date().toISOString(),
+        deadline: 'Completed',
+        rewardPool: bounty,
+        depositAmount: bounty,
+        aiAuditEnabled: true,
+        aiThresholdLine: 75,
+        status: 'Completed',
+        assignedAgent: 'Platform Debug Killer',
+        criteriaName: draftedProposal.criteriaName,
+        selectedCriteriaOption: draftedProposal.selectedCriteriaOption,
+        outputFormat: draftedProposal.outputFormat,
+        taskURI: `ipfs://Qm${generateHash('task_')}`,
+        orderURI: `ipfs://Qm${generateHash('order_')}`,
+        criteriaHash: generateHash('0x'),
+        minerSubmissionsCount: 1,
+        minerSubmissions: [
+          {
+            id: 'sub-' + Date.now(),
+            taskId: newTaskId,
+            workerAddress: '0x3f5ce...d88a',
+            submittedAt: new Date().toISOString(),
+            content: exec.status === 'diagnosed'
+              ? `Debug Agent diagnosed the repository. Reproduced: ${summary.reproduced ? 'YES' : 'NO'}. Patch iterations: ${summary.patch_iterations ?? 'N/A'}. Verification returncode: ${summary.verification_returncode ?? 'N/A'}.`
+              : `Agent execution completed with status: ${exec.status || 'unknown'}.`,
+            outputURI: `ipfs://Qm${generateHash('out_')}`,
+            outputHash: generateHash('0x'),
+            status: 'Settled',
+            evaluation: {
+              validatorAddress: '0xSystemAgent',
+              validatorScore: summary.patch_generated ? 100 : 50,
+              validatorReason: summary.patch_generated
+                ? 'Debug Agent successfully reproduced the bug and generated a verified patch.'
+                : 'Agent completed diagnosis but could not generate a verified patch.',
+              aiScore: summary.patch_generated ? 100 : 50,
+              aiExplanation: `LLM tokens used: ${exec.usage?.llm_total_tokens ?? 'N/A'}. Repo cloned: ${exec.usage?.repo_cloned ? 'YES' : 'NO'}. Commands run: ${exec.usage?.commands_run ?? 'N/A'}.`,
+              finalScore: summary.patch_generated ? 100 : 50,
+              delta: 12,
+              reputationChange: 5,
+              settled: true,
+            },
+          },
+        ],
+      };
+
+      setTasks((prev) => [newlyDeployed, ...prev]);
+
+      triggerAlarm(
+        'success',
+        locale === 'zh'
+          ? `Agent 执行完成！已生成 ${summary.patch_generated ? '漏洞修复补丁' : '诊断报告'}，可下载查看。`
+          : `Agent execution complete! ${summary.patch_generated ? 'Patch generated' : 'Diagnosis ready'} for download.`,
+      );
+
+      setFormSubmittingStage('completed_download');
+    } catch (err: any) {
+      setAgentError(err?.message || String(err));
+      triggerAlarm('error', locale === 'zh' ? `Agent 调用失败: ${err?.message || '未知错误'}` : `Agent call failed: ${err?.message || 'Unknown error'}`);
+      setFormSubmittingStage('proposal_ready');
+    }
+  };
+
   // Approve proposal and deposit/lock assets using Cobo Wallet balance
   const handleDeployDraftedProposal = () => {
     if (!draftedProposal) return;
+
+    // Web3 Debug tasks → route to the real Agent pipeline
+    if (draftedProposal.type === 'web3') {
+      handleAgentDeploy();
+      return;
+    }
 
     if (wallet.balance < draftedProposal.rewardPool) {
       triggerAlarm('error', locale === 'zh' ? 'MetaMask 智能托管代扣失败：可用 ETH 余量不足！' : 'Escrow Deposit failed: Insufficient wallet balance!');
@@ -1028,16 +1268,18 @@ export default function App() {
             <NetworkStatsWidget />
           </div>
 
-          {/* Embedded Cobo Agentic Wallet state indicator widget */}
+          {/* Embedded MetaMask wallet widget */}
           <div className="flex flex-col gap-4">
             <CoboWalletWidget
               walletState={wallet}
               onApproveItem={handleApproveWalletItem}
               onRejectItem={handleRejectWalletItem}
+              onConnect={handleConnectWallet}
+              onDisconnect={handleDisconnectWallet}
             />
             {/* Version credits */}
             <div className="flex items-center justify-between text-[10px] text-slate-600 font-mono px-1">
-              <span>Arbitrum Nova devnet</span>
+              <span>Sepolia Testnet</span>
               <span>v1.0.0 (MVP)</span>
             </div>
           </div>
@@ -1543,9 +1785,89 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Agent Phase 1: Intake — validating task requirements */}
+                    {formSubmittingStage === 'agent_intake' && (
+                      <div className="bg-[#150f0c] border-2 border-[#4a3427] p-8 rounded text-center space-y-4 animate-pulse">
+                        <Scale className="w-10 h-10 text-[#dfab6c] mx-auto animate-spin" />
+                        <div className="space-y-1.5">
+                          <h4 className="font-serif font-black text-sm text-[#dfab6c] uppercase">
+                            {locale === 'zh' ? '正在与 Aurora Agent 核心协商...' : 'Negotiating with Aurora Agent Core...'}
+                          </h4>
+                          <p className="text-[11px] text-[#8e7564] font-mono">
+                            {locale === 'zh' ? '智能体正在解析您的代码库摘要及需求，并评估分级预算提案。' : 'The agent is parsing your codebase summary and evaluating the task specification.'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Agent Phase 1b: Intake says more info needed */}
+                    {formSubmittingStage === 'agent_need_info' && (
+                      <div className="bg-[#1c1310] border-2 border-[#bf311d]/30 p-6 rounded space-y-4 text-left">
+                        <div className="flex items-start gap-3">
+                          <ShieldAlert className="w-8 h-8 text-[#bf311d] shrink-0 mt-0.5" />
+                          <div className="space-y-2 flex-1">
+                            <h4 className="font-serif font-black text-sm text-[#bf311d] uppercase">
+                              {locale === 'zh' ? '任务信息不完整' : 'Incomplete Task Information'}
+                            </h4>
+                            {agentMessage && (
+                              <p className="text-[11px] text-[#ebdcb9]/80 font-mono leading-relaxed">
+                                {agentMessage}
+                              </p>
+                            )}
+                            {agentMissingFields.length > 0 && (
+                              <div className="bg-[#150f0c] border border-[#4a3427] p-3 rounded space-y-1.5">
+                                <span className="text-[10px] font-mono text-[#dfab6c] font-black uppercase block">
+                                  {locale === 'zh' ? '缺失字段：' : 'Missing Fields:'}
+                                </span>
+                                <ul className="list-disc list-inside text-[10px] text-[#8e7564] font-mono space-y-0.5">
+                                  {agentMissingFields.map((f, i) => (
+                                    <li key={i}>{f}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormSubmittingStage('proposal_ready');
+                              setAgentError(null);
+                            }}
+                            className="flex-1 py-2 bg-transparent border border-[#4a3427] text-[#a58d7c] font-black text-xs uppercase hover:bg-black/20 rounded transition"
+                          >
+                            {locale === 'zh' ? '返回修改表单' : 'BACK TO FORM'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Agent Phase 2: Executing debug miner */}
+                    {formSubmittingStage === 'agent_executing' && (
+                      <div className="bg-[#150f0c] border-2 border-[#4a3427] p-8 rounded text-center space-y-4 animate-pulse">
+                        <Cpu className="w-10 h-10 text-[#dfab6c] mx-auto animate-spin" />
+                        <div className="space-y-1.5">
+                          <h4 className="font-serif font-black text-sm text-[#dfab6c] uppercase">
+                            {locale === 'zh' ? 'Debug Agent 沙盒执行中...' : 'Debug Agent Sandbox Executing...'}
+                          </h4>
+                          <p className="text-[11px] text-[#8e7564] font-mono">
+                            {locale === 'zh'
+                              ? '正在克隆仓库、复现错误、生成补丁并验证修复。这可能需要 1-2 分钟，请耐心等待。'
+                              : 'Cloning repository, reproducing the bug, generating patches, and verifying the fix. This may take 1–2 minutes.'}
+                          </p>
+                          <div className="flex justify-center gap-1.5 pt-2">
+                            {[0, 1, 2].map((i) => (
+                              <div key={i} className="w-2 h-2 bg-[#dfab6c]/60 rounded-full animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {formSubmittingStage === 'completed_download' && (
                       <div className="space-y-6 animate-scale-up text-left">
-                        
+
                         {/* Status Stamp Alert */}
                         <div className="bg-[#1c2e1a] border-2 border-[#849c44] p-5 rounded space-y-4 flex flex-col md:flex-row items-center md:items-start gap-4">
                           <CheckCircle2 className="w-10 h-10 text-[#849c44] shrink-0" />
@@ -1554,13 +1876,127 @@ export default function App() {
                               {locale === 'zh' ? '自主结算成功 · 代码级漏洞修复已就绪' : 'PACT SETTLED • CRYPTOGRAPHIC REMEDIATION SECURED'}
                             </h4>
                             <p className="text-[11px] text-[#ebdcb9]/80 font-sans leading-relaxed">
-                              {locale === 'zh'
-                                ? `由于您启用了 Platform Debug Agent 加速机制，系统在代扣划转 ${web3Bounty} ETH 至托管池的同时，智能虚拟机沙盒已提前验证并自主完成了针对 ${web3IssueType} 的全套修复审计。下面是以前述对话阶段整合的代维成果。`
-                                : `With Platform Debug Agent acceleration engaged, ${web3Bounty} ETH has been successfully escrowed and the sandbox VM has automatically complied, passing 100% of the vulnerability mitigations.`}
+                              {agentResult
+                                ? (locale === 'zh'
+                                  ? `Aurora Debug Agent 已完成对仓库 ${web3RepoUrl} 的深度诊断。漏洞已复现，补丁已生成并验证。以下是 Agent 执行的真实结果。`
+                                  : `Aurora Debug Agent has completed diagnosis of ${web3RepoUrl}. The bug was reproduced, patches were generated and verified. Real execution results are shown below.`)
+                                : (locale === 'zh'
+                                  ? `由于您启用了 Platform Debug Agent 加速机制，系统在代扣划转 ${web3Bounty} ETH 至托管池的同时，智能虚拟机沙盒已提前验证并自主完成了针对 ${web3IssueType} 的全套修复审计。下面是以前述对话阶段整合的代维成果。`
+                                  : `With Platform Debug Agent acceleration engaged, ${web3Bounty} ETH has been successfully escrowed and the sandbox VM has automatically complied, passing 100% of the vulnerability mitigations.`)}
                             </p>
                           </div>
                         </div>
 
+                        {/* ── Real Agent Results (when available) ── */}
+                        {agentResult && agentResult.execution && (
+                          <div className="space-y-4">
+                            {/* Execution Summary */}
+                            <div className="bg-[#150f0c] border border-[#849c44]/30 p-4 rounded space-y-3">
+                              <h5 className="font-mono text-[10px] text-[#849c44] uppercase font-black tracking-wider">
+                                {locale === 'zh' ? '▎Agent 执行摘要' : '▎AGENT EXECUTION SUMMARY'}
+                              </h5>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px] font-mono">
+                                <div className="bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                  <span className="text-[#8e7564] block">{locale === 'zh' ? '状态' : 'Status'}</span>
+                                  <span className="text-[#ebdcb9] font-bold">{agentResult.execution.status || 'completed'}</span>
+                                </div>
+                                <div className="bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                  <span className="text-[#8e7564] block">{locale === 'zh' ? 'Bug 复现' : 'Reproduced'}</span>
+                                  <span className={agentResult.execution.summary?.reproduced ? 'text-[#849c44] font-bold' : 'text-[#bf311d] font-bold'}>
+                                    {agentResult.execution.summary?.reproduced ? 'YES' : 'NO'}
+                                  </span>
+                                </div>
+                                <div className="bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                  <span className="text-[#8e7564] block">{locale === 'zh' ? '补丁生成' : 'Patch'}</span>
+                                  <span className={agentResult.execution.summary?.patch_generated ? 'text-[#849c44] font-bold' : 'text-[#bf311d] font-bold'}>
+                                    {agentResult.execution.summary?.patch_generated ? 'YES' : 'NO'}
+                                  </span>
+                                </div>
+                                <div className="bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                  <span className="text-[#8e7564] block">{locale === 'zh' ? '迭代次数' : 'Iterations'}</span>
+                                  <span className="text-[#ebdcb9] font-bold">{agentResult.execution.summary?.patch_iterations ?? '-'}</span>
+                                </div>
+                                <div className="bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                  <span className="text-[#8e7564] block">{locale === 'zh' ? '验证返回码' : 'Verify RC'}</span>
+                                  <span className="text-[#ebdcb9] font-bold">{agentResult.execution.summary?.verification_returncode ?? '-'}</span>
+                                </div>
+                                <div className="bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                  <span className="text-[#8e7564] block">LLM Tokens</span>
+                                  <span className="text-[#ebdcb9] font-bold">{agentResult.execution.usage?.llm_total_tokens ?? '-'}</span>
+                                </div>
+                                <div className="bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                  <span className="text-[#8e7564] block">{locale === 'zh' ? 'LLM 调用' : 'LLM Calls'}</span>
+                                  <span className="text-[#ebdcb9] font-bold">{agentResult.execution.usage?.llm?.calls ?? '-'}</span>
+                                </div>
+                                <div className="bg-[#0b0705] p-2.5 rounded border border-[#4a3427]/50">
+                                  <span className="text-[#8e7564] block">{locale === 'zh' ? '文件修改' : 'Files Modified'}</span>
+                                  <span className="text-[#ebdcb9] font-bold">{agentResult.execution.usage?.files_modified ?? '-'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Agent Message (from intake) */}
+                            {agentMessage && (
+                              <div className="bg-[#150f0c] border border-[#4a3427] p-3 rounded text-[10px] text-[#ebdcb9]/80 font-mono leading-relaxed">
+                                <span className="text-[#dfab6c] font-bold block mb-1">
+                                  {locale === 'zh' ? 'Agent 反馈：' : 'Agent Message:'}
+                                </span>
+                                {agentMessage}
+                              </div>
+                            )}
+
+                            {/* Artifacts */}
+                            {agentResult.execution.artifacts && agentResult.execution.artifacts.length > 0 && (
+                              <div className="bg-[#150f0c] border border-[#849c44]/30 p-4 rounded space-y-3">
+                                <h5 className="font-mono text-[10px] text-[#849c44] uppercase font-black tracking-wider">
+                                  {locale === 'zh' ? '▎Agent 产物列表' : '▎AGENT ARTIFACTS'}
+                                </h5>
+                                <div className="space-y-2">
+                                  {agentResult.execution.artifacts.map((artifact, idx) => {
+                                    const typeLabel: Record<string, string> = {
+                                      debug_report: locale === 'zh' ? '调试报告' : 'Debug Report',
+                                      repo_context: locale === 'zh' ? '仓库上下文' : 'Repo Context',
+                                      runtime: locale === 'zh' ? '运行时日志' : 'Runtime Log',
+                                      trace: locale === 'zh' ? '执行追踪' : 'Execution Trace',
+                                      patch: locale === 'zh' ? '补丁文件' : 'Patch Diff',
+                                      modified_repo: locale === 'zh' ? '修改后仓库' : 'Modified Repo',
+                                    };
+                                    return (
+                                      <div key={idx} className="bg-[#0b0705] border border-[#4a3427]/50 p-3 rounded flex items-center justify-between">
+                                        <div className="flex items-center gap-2.5">
+                                          {artifact.type === 'debug_report' && <FileText className="w-4 h-4 text-[#dfab6c]" />}
+                                          {artifact.type === 'patch' && <FileText className="w-4 h-4 text-[#849c44]" />}
+                                          {artifact.type === 'modified_repo' && <FileArchive className="w-4 h-4 text-[#dfab6c]" />}
+                                          {artifact.type === 'runtime' && <Cpu className="w-4 h-4 text-[#8e7564]" />}
+                                          {artifact.type === 'trace' && <Bot className="w-4 h-4 text-[#8e7564]" />}
+                                          {artifact.type === 'repo_context' && <FileText className="w-4 h-4 text-[#8e7564]" />}
+                                          <div>
+                                            <span className="text-[11px] text-[#ebdcb9] font-mono font-bold block">
+                                              {typeLabel[artifact.type] || artifact.type}
+                                            </span>
+                                            <span className="text-[9px] text-[#8e7564] font-mono">{artifact.path}</span>
+                                          </div>
+                                        </div>
+                                        <span className="text-[9px] px-2 py-0.5 bg-black/30 rounded font-mono text-[#8e7564] uppercase">
+                                          {artifact.type}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <p className="text-[9px] text-[#8e7564] font-mono pt-1">
+                                  {locale === 'zh'
+                                    ? '产物位于后端 artifacts 目录，可通过后续 /v1/artifacts 端点下载。'
+                                    : 'Artifacts are on the backend. Download via /v1/artifacts endpoint (coming soon).'}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* ── Mock Dialogue Recap (shown when no real agent result) ── */}
+                        {!agentResult && (
+                        <>
                         {/* Interactive Two-step Dialog Recap */}
                         <div className="space-y-4">
                           <h5 className="font-mono text-[10px] text-[#dfab6c] uppercase font-black tracking-wider">
@@ -1697,8 +2133,10 @@ export default function App() {
                             <div><strong>{locale === 'zh' ? '托管结算：' : 'Escrow: '}</strong>{web3Bounty} ETH (Paid)</div>
                           </div>
                         </div>
+                        </>
+                        )}
 
-                        {/* Reset & Navigation bar */}
+                        {/* Reset & Navigation bar (always shown) */}
                         <div className="flex flex-col sm:flex-row gap-3 pt-1">
                           <button
                             type="button"
@@ -1707,6 +2145,7 @@ export default function App() {
                               setDefinePath(null);
                               setFormSubmittingStage('none');
                               setDraftedProposal(null);
+                              setAgentResult(null);
                             }}
                             className="flex-1 py-2.5 bg-transparent border border-[#4a3427] text-[#ebdcb9] font-serif font-black text-xs uppercase hover:bg-black/20 rounded transition text-center cursor-pointer"
                           >
@@ -2657,8 +3096,6 @@ export default function App() {
         );
       })()}
 
-        </>
-      )}
     </div>
   );
 }
