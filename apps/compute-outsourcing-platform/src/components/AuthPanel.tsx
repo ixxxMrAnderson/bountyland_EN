@@ -276,25 +276,25 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onAuthSuccess, initialShow
         </button>
       </div>
 
-      <div className="relative z-10 w-full max-w-md animate-scale-up">
-        
+      <div className="relative z-10 w-full max-w-sm animate-scale-up">
+
         {/* Main Logo Card */}
-        <div className="text-center mb-6">
-          <div className="mb-3 inline-flex items-center gap-2 border border-[#e0ad71]/22 bg-[#130b08]/28 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-[#e7bd7d]/55 backdrop-blur-sm">
+        <div className="text-center mb-4">
+          <div className="mb-2 inline-flex items-center gap-2 border border-[#e0ad71]/22 bg-[#130b08]/28 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-widest text-[#e7bd7d]/55 backdrop-blur-sm">
             <Cpu className="w-3 h-3 text-[#dfab6c]" />
             <span>AI-Audited Decentranet</span>
           </div>
 
-          <h2 className="flex items-center justify-center gap-1 font-serif text-4xl font-black tracking-[0.28em] text-[#f3d4a0]/72 drop-shadow-[0_9px_34px_rgba(0,0,0,0.62)]">
+          <h2 className="flex items-center justify-center gap-1 font-serif text-3xl font-black tracking-[0.26em] text-[#f3d4a0]/72 drop-shadow-[0_9px_34px_rgba(0,0,0,0.62)]">
             BOUNTYLAND
           </h2>
-          <p className="mx-auto mt-1.5 max-w-xs font-mono text-xs text-[#e7bd7d]/50">
+          <p className="mx-auto mt-1 max-w-xs font-mono text-[11px] text-[#e7bd7d]/50">
             {locale === 'zh' ? '多引擎安全多签托管算力管理终端' : 'Secure multisig computing wanted terminal'}
           </p>
         </div>
 
         {/* Central Authentication Card layout container (vintage saloon board theme) */}
-        <div className="relative overflow-hidden border border-[#e0ad71]/22 bg-[#110806]/44 p-7 shadow-[0_28px_80px_rgba(0,0,0,0.54)] outline outline-1 outline-offset-4 outline-[#e0ad71]/12 backdrop-blur-xl">
+        <div className="relative overflow-hidden border border-[#e0ad71]/22 bg-[#110806]/44 p-5 shadow-[0_28px_80px_rgba(0,0,0,0.54)] outline outline-1 outline-offset-4 outline-[#e0ad71]/12 backdrop-blur-xl">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,236,198,0.09)_0%,rgba(255,236,198,0.015)_42%,rgba(191,49,29,0.08)_100%)]" />
           
           {/* Close button returning to Intro Screen (matches Section 0 [x] layout) */}
@@ -307,7 +307,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onAuthSuccess, initialShow
                 setShowIntro(true);
               }
             }}
-            className="absolute right-3.5 top-3.5 z-50 flex h-7 w-7 cursor-pointer items-center justify-center border border-[#e0ad71]/24 bg-[#201612]/42 text-[#e7bd7d]/52 backdrop-blur transition hover:border-[#bf311d]/55 hover:bg-[#bf311d]/70 hover:text-white"
+            className="absolute right-0 top-0 z-50 flex h-7 w-7 cursor-pointer items-center justify-center text-[#e7bd7d]/55 transition hover:text-[#bf311d] hover:scale-110"
             title={locale === 'zh' ? '返回封面' : 'Back to cover'}
           >
             <X className="w-4 h-4" />
@@ -317,7 +317,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onAuthSuccess, initialShow
 
           {/* Form Switch tabs */}
           {!web3Connecting && (
-            <div className="relative mb-5 flex gap-1 border border-[#e0ad71]/18 bg-[#0b0705]/34 p-1 backdrop-blur-sm">
+            <div className="relative mb-4 flex gap-1 border border-[#e0ad71]/18 bg-[#0b0705]/34 p-1 backdrop-blur-sm">
               <button
                 type="button"
                 onClick={() => {
@@ -325,7 +325,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onAuthSuccess, initialShow
                   setErrorMessage(null);
                   setSuccessMessage(null);
                 }}
-                className={`flex-1 py-1.5 text-xs font-mono font-bold rounded transition ${
+                className={`flex-1 py-2 text-xs font-mono font-bold rounded transition ${
                   mode === 'login' 
                     ? 'border border-[#dfab6c]/30 bg-[#1b120e]/58 text-[#dfab6c]' 
                     : 'text-[#e7bd7d]/42 hover:text-[#dfab6c]'
@@ -340,7 +340,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onAuthSuccess, initialShow
                   setErrorMessage(null);
                   setSuccessMessage(null);
                 }}
-                className={`flex-1 py-1.5 text-xs font-mono font-bold rounded transition ${
+                className={`flex-1 py-2 text-xs font-mono font-bold rounded transition ${
                   mode === 'register' 
                     ? 'border border-[#dfab6c]/30 bg-[#1b120e]/58 text-[#dfab6c]' 
                     : 'text-[#e7bd7d]/42 hover:text-[#dfab6c]'
@@ -382,14 +382,14 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onAuthSuccess, initialShow
             </div>
           ) : (
             // Form content
-            <form onSubmit={handleSubmit} className="relative space-y-4">
+            <form onSubmit={handleSubmit} className="relative space-y-3">
               
               {/* Form Headers */}
               <div>
                 <h2 className="font-serif font-black text-base text-[#dfab6c] uppercase">
                   {mode === 'login' ? t('loginTitle') : t('signUpTitle')}
                 </h2>
-                <p className="text-[10px] text-[#a58d7c] font-mono mt-0.5">
+                <p className="text-[10px] text-[#a58d7c] font-mono mt-0.5 leading-snug min-h-[2.4em]">
                   {mode === 'login' ? t('loginSubTitle') : t('signUpSubTitle')}
                 </p>
               </div>
@@ -451,32 +451,34 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onAuthSuccess, initialShow
                 </div>
               </div>
 
-              {/* Confirm Password (Register mode only) */}
-              {mode === 'register' && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold font-mono text-[#8e7564] uppercase block">
-                    {locale === 'zh' ? '确签证书密码' : 'Confirm Password'}
-                  </label>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8e7564]" />
-                    <input
-                      type="password"
-                      required
-                      minLength={6}
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="h-9 w-full border border-[#e0ad71]/20 bg-[#0b0705]/42 pl-9 pr-3.5 font-mono text-xs text-[#ebdcb9] shadow-inner outline-none backdrop-blur-sm transition placeholder:text-[#e7bd7d]/22 hover:border-[#dfab6c]/40 focus:border-[#dfab6c]"
-                    />
-                  </div>
+              {/* Confirm Password — always occupies its slot so login & register keep one size */}
+              <div
+                className={`space-y-1 transition-opacity duration-200 ${mode === 'register' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                aria-hidden={mode !== 'register'}
+              >
+                <label className="text-[10px] font-bold font-mono text-[#8e7564] uppercase block">
+                  {locale === 'zh' ? '确签证书密码' : 'Confirm Password'}
+                </label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8e7564]" />
+                  <input
+                    type="password"
+                    required={mode === 'register'}
+                    tabIndex={mode === 'register' ? 0 : -1}
+                    minLength={6}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="h-9 w-full border border-[#e0ad71]/20 bg-[#0b0705]/42 pl-9 pr-3.5 font-mono text-xs text-[#ebdcb9] shadow-inner outline-none backdrop-blur-sm transition placeholder:text-[#e7bd7d]/22 hover:border-[#dfab6c]/40 focus:border-[#dfab6c]"
+                  />
                 </div>
-              )}
+              </div>
 
               {/* Direct Submit Action */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-10 bg-[#bf311d] hover:bg-[#a02817] text-white rounded font-serif font-black text-xs cursor-pointer transition flex items-center justify-center gap-1.5 disabled:opacity-40 select-none shadow shadow-[#bf311d]/20 uppercase border border-[#7e1c0e] py-2"
+                className="w-full h-10 bg-[#bf311d] hover:bg-[#a02817] text-white rounded font-serif font-black text-xs cursor-pointer transition flex items-center justify-center gap-1.5 disabled:opacity-40 select-none shadow shadow-[#bf311d]/20 uppercase border border-[#7e1c0e]"
               >
                 {isLoading ? (
                   <>
@@ -492,7 +494,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onAuthSuccess, initialShow
               </button>
 
               {/* Alternative Separator */}
-              <div className="relative my-4 flex items-center justify-center">
+              <div className="relative my-3 flex items-center justify-center">
                 <span className="absolute inset-x-0 h-[1px] bg-[#4a3427]/40"></span>
                 <span className="relative bg-[#120907]/70 px-3.5 text-[8px] font-bold font-mono text-[#8e7564] uppercase tracking-widest backdrop-blur-sm">
                   {locale === 'zh' ? '或者 Web3 钱包登录' : 'OR SECURE WEB3 GATE'}
@@ -517,7 +519,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ onAuthSuccess, initialShow
         </div>
 
         {/* Outer developer credits notes */}
-        <div className="mx-auto mt-5 max-w-sm border border-[#e0ad71]/12 bg-[#150f0c]/20 p-3 text-center backdrop-blur-sm">
+        <div className="mx-auto mt-3.5 max-w-sm border border-[#e0ad71]/12 bg-[#150f0c]/20 p-2.5 text-center backdrop-blur-sm">
           <p className="font-mono text-[9px] leading-relaxed text-[#e7bd7d]/45">
             {locale === 'zh' ? '💡 捷径：开发者账户 admin 密钥 password123' : '💡 Shortcut: login with admin / password123'}
           </p>

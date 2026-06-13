@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Target, RefreshCw } from 'lucide-react';
 import { useTranslation } from '../locales';
 
-export const NetworkStatsWidget: React.FC = () => {
+export const NetworkStatsWidget: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const { t, locale } = useTranslation();
   
   // Real-time fluctuating state variable representing bounty hunters saddled up
@@ -27,6 +27,23 @@ export const NetworkStatsWidget: React.FC = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  if (compact) {
+    return (
+      <div
+        className="flex flex-col items-center gap-1 select-none"
+        title={locale === 'zh' ? `${activeMiners} 个活跃计算节点` : `${activeMiners} active nodes`}
+      >
+        <div className="relative w-10 h-10 rounded-full bg-[#150f0c] border border-[#4a3427] flex items-center justify-center shadow-md">
+          <Target className="w-4 h-4 text-[#dfab6c]" />
+          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#849c44] animate-pulse border border-[#0f0a08]"></span>
+        </div>
+        <span className="text-[10px] font-serif font-black text-[#dfab6c] leading-none tracking-tight">
+          {activeMiners}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#150f0c] border-[#4a3427] border-2 rounded px-4 py-3 shadow-md hover:border-[#8e5c3c] transition duration-300 relative overflow-hidden select-none outline outline-1 outline-offset-4 outline-[#4a3427]/20">

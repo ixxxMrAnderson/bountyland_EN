@@ -42,32 +42,32 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto animate-fade-in">
-      <div 
-        className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden text-left"
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#080504]/80 backdrop-blur-sm overflow-y-auto animate-fade-in">
+      <div
+        className="bg-[#140c09] border-2 border-[#543b2c] rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-[0_28px_80px_rgba(0,0,0,0.6)] outline outline-1 outline-offset-4 outline-[#dfab6c]/10 relative overflow-hidden text-left"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header decoration */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-cyan via-brand-indigo to-brand-purple"></div>
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#9e331b] via-[#dfab6c] to-[#9e331b]"></div>
 
         {/* Action Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 p-5 mt-1.5">
+        <div className="flex items-center justify-between border-b border-[#4a3427] p-5 mt-1.5">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-mono font-bold bg-brand-emerald/10 text-brand-emerald border border-brand-emerald/20 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-mono font-bold bg-[#849c44]/10 text-[#849c44] border border-[#849c44]/25 px-2 py-0.5 rounded">
                 {t('ipfsVerified')}
               </span>
-              <span className="text-xs text-slate-500 font-mono">
+              <span className="text-xs text-[#8e7564] font-mono">
                 {t('idLabel')} {task.id}
               </span>
             </div>
-            <h2 className="font-display font-bold text-xl text-white">
+            <h2 className="font-serif font-black text-xl text-[#dfab6c] tracking-wide">
               {displayTitle}
             </h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center border border-slate-700 transition cursor-pointer"
+            className="w-8 h-8 rounded-full bg-[#1c1310] hover:bg-[#bf311d] text-[#8e7564] hover:text-white flex items-center justify-center border border-[#4a3427] hover:border-[#bf311d] transition cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -76,25 +76,25 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         {/* Modal content body (scrollable) */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           {/* Overview grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-850">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#0f0a08] p-4 rounded-xl border border-[#4a3427]">
             <div>
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">{t('rewardPool')}</span>
-              <span className="font-mono text-base font-bold text-brand-indigo">{task.rewardPool.toFixed(3)} ETH</span>
+              <span className="text-[10px] text-[#8e7564] uppercase tracking-wider font-semibold block">{t('rewardPool')}</span>
+              <span className="font-mono text-base font-bold text-[#dfab6c]">{task.rewardPool.toFixed(3)} ETH</span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">{t('pactRequireDeposit')}</span>
-              <span className="font-mono text-base font-bold text-brand-cyan">{task.depositAmount.toFixed(3)} ETH</span>
+              <span className="text-[10px] text-[#8e7564] uppercase tracking-wider font-semibold block">{t('pactRequireDeposit')}</span>
+              <span className="font-mono text-base font-bold text-[#e0ad71]">{task.depositAmount.toFixed(3)} ETH</span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">{t('timeWindow')}</span>
-              <span className="text-xs text-slate-300 font-semibold flex items-center gap-1 mt-1">
-                <Calendar className="w-3.5 h-3.5 text-brand-indigo" />
+              <span className="text-[10px] text-[#8e7564] uppercase tracking-wider font-semibold block">{t('timeWindow')}</span>
+              <span className="text-xs text-[#ebdcb9] font-semibold flex items-center gap-1 mt-1">
+                <Calendar className="w-3.5 h-3.5 text-[#dfab6c]" />
                 {task.deadline.replace('remaining', '剩余')}
               </span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">{t('aiAuditStatus')}</span>
-              <span className="text-xs text-brand-emerald font-semibold flex items-center gap-1 mt-1">
+              <span className="text-[10px] text-[#8e7564] uppercase tracking-wider font-semibold block">{t('aiAuditStatus')}</span>
+              <span className="text-xs text-[#849c44] font-semibold flex items-center gap-1 mt-1">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 {task.aiAuditEnabled ? t('aiEnacted') : t('aiDisabled')}
               </span>
@@ -103,27 +103,27 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
           {/* Description Section */}
           <div className="space-y-2">
-            <h4 className="text-xs uppercase font-mono font-bold tracking-wider text-slate-400">{t('taskSummary')}</h4>
-            <div className="text-sm text-slate-300 bg-slate-900/60 leading-relaxed border border-slate-850 p-3.5 rounded-lg whitespace-pre-wrap">
+            <h4 className="text-xs uppercase font-mono font-bold tracking-wider text-[#8e7564]">{t('taskSummary')}</h4>
+            <div className="text-sm text-[#ebdcb9] bg-[#0f0a08]/60 leading-relaxed border border-[#4a3427] p-3.5 rounded-lg whitespace-pre-wrap">
               {displayDescription}
             </div>
           </div>
 
           {/* IPFS Hash Registry */}
           <div className="space-y-2">
-            <h4 className="text-xs uppercase font-mono font-bold tracking-wider text-slate-400">{t('decentralizedRegistry')}</h4>
-            <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 space-y-1.5 text-xs font-mono">
+            <h4 className="text-xs uppercase font-mono font-bold tracking-wider text-[#8e7564]">{t('decentralizedRegistry')}</h4>
+            <div className="bg-[#0f0a08] p-3 rounded-lg border border-[#4a3427] space-y-1.5 text-xs font-mono">
               <div className="flex justify-between flex-wrap gap-1">
-                <span className="text-slate-500">{t('taskUriLabel')}</span>
-                <span className="text-brand-cyan select-all text-[11px]">{task.taskURI}</span>
+                <span className="text-[#8e7564]">{t('taskUriLabel')}</span>
+                <span className="text-[#dfab6c] select-all text-[11px]">{task.taskURI}</span>
               </div>
               <div className="flex justify-between flex-wrap gap-1">
-                <span className="text-slate-500">{t('orderUriLabel')}</span>
-                <span className="text-brand-purple select-all text-[11px]">{task.orderURI}</span>
+                <span className="text-[#8e7564]">{t('orderUriLabel')}</span>
+                <span className="text-[#dfab6c] select-all text-[11px]">{task.orderURI}</span>
               </div>
               <div className="flex justify-between flex-wrap gap-1">
-                <span className="text-slate-500">{t('hashLabel')}</span>
-                <span className="text-brand-indigo select-all text-[11px]">{task.criteriaHash}</span>
+                <span className="text-[#8e7564]">{t('hashLabel')}</span>
+                <span className="text-[#cd9a5b] select-all text-[11px]">{task.criteriaHash}</span>
               </div>
             </div>
           </div>
@@ -131,19 +131,19 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           {/* Criteria & Audit Metrics */}
           {criteria && (
             <div className="space-y-4 pt-2">
-              <div className="border-t border-slate-850 my-2"></div>
+              <div className="border-t border-[#4a3427] my-2"></div>
               <div className="flex items-center gap-2">
-                <Milestone className="w-4 h-4 text-brand-indigo" />
-                <h4 className="text-sm font-display font-bold text-slate-100">{t('validatorGuidelineTitle')} {criteria.name}</h4>
+                <Milestone className="w-4 h-4 text-[#dfab6c]" />
+                <h4 className="text-sm font-serif font-bold text-[#dfab6c]">{t('validatorGuidelineTitle')} {criteria.name}</h4>
               </div>
-              
-              <p className="text-xs text-slate-400">
+
+              <p className="text-xs text-[#a58d7c]">
                 {criteria.description}
               </p>
 
               {/* Score breakdown metrics */}
               <div className="space-y-2.5">
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{t('weightAllocationTitle')}</span>
+                <span className="text-[10px] text-[#8e7564] uppercase tracking-wider font-semibold">{t('weightAllocationTitle')}</span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {criteria.scoringDimensions.map((dim, idx) => {
                     let dimName = dim.name;
@@ -157,9 +157,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                         .replace('Rubric specific checklist items', '专有考核内容契合度');
                     }
                     return (
-                      <div key={idx} className="bg-slate-950 p-3 rounded-lg border border-slate-850/60">
-                        <div className="text-xs text-slate-300 font-medium line-clamp-1 mb-1">{dimName}</div>
-                        <div className="text-lg font-mono font-bold text-brand-indigo">{dim.weight}%</div>
+                      <div key={idx} className="bg-[#0f0a08] p-3 rounded-lg border border-[#4a3427]/60">
+                        <div className="text-xs text-[#ebdcb9] font-medium line-clamp-1 mb-1">{dimName}</div>
+                        <div className="text-lg font-mono font-bold text-[#dfab6c]">{dim.weight}%</div>
                       </div>
                     );
                   })}
@@ -168,9 +168,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
               {/* Verification checklists */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-850">
-                  <span className="text-[10px] text-brand-indigo uppercase font-mono font-bold block mb-2">{t('validatorChecklistLabel')}</span>
-                  <ul className="text-xs text-slate-400 space-y-2">
+                <div className="bg-[#0f0a08] p-4 rounded-xl border border-[#4a3427]">
+                  <span className="text-[10px] text-[#dfab6c] uppercase font-mono font-bold block mb-2">{t('validatorChecklistLabel')}</span>
+                  <ul className="text-xs text-[#a58d7c] space-y-2">
                     {criteria.checklist.map((item, idx) => {
                       let chName = item;
                       if (locale === 'zh') {
@@ -184,7 +184,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                       }
                       return (
                         <li key={idx} className="flex gap-2 items-start">
-                          <span className="w-4 h-4 rounded bg-slate-900 border border-slate-800 text-brand-indigo flex items-center justify-center text-[9px] shrink-0 font-bold">{idx + 1}</span>
+                          <span className="w-4 h-4 rounded bg-[#1c1310] border border-[#4a3427] text-[#dfab6c] flex items-center justify-center text-[9px] shrink-0 font-bold">{idx + 1}</span>
                           <span>{chName}</span>
                         </li>
                       );
@@ -192,12 +192,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   </ul>
                 </div>
 
-                <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-850">
-                  <span className="text-[10px] text-brand-emerald uppercase font-mono font-bold block mb-2">{t('aiAuditorEnforceLabel')}</span>
-                  <div className="text-xs text-slate-400 font-mono italic p-2 bg-slate-950 border border-slate-850 rounded">
+                <div className="bg-[#0f0a08]/40 p-4 rounded-xl border border-[#4a3427]">
+                  <span className="text-[10px] text-[#849c44] uppercase font-mono font-bold block mb-2">{t('aiAuditorEnforceLabel')}</span>
+                  <div className="text-xs text-[#a58d7c] font-mono italic p-2 bg-[#0f0a08] border border-[#4a3427] rounded">
                     "{locale === 'en' ? criteria.auditPrompt : criteria.auditPrompt.replace('You are an expert AI auditor', '你是一个专家级全链 AI 审计监督者...检测矿工成果格式与标准。')}"
                   </div>
-                  <div className="mt-4 flex items-center gap-2 bg-brand-emerald/5 border border-brand-emerald/10 p-2.5 rounded text-[11px] text-brand-emerald">
+                  <div className="mt-4 flex items-center gap-2 bg-[#849c44]/5 border border-[#849c44]/15 p-2.5 rounded text-[11px] text-[#849c44]">
                     <ShieldCheck className="w-4 h-4 shrink-0" />
                     <span>{t('disputeDeviationWarn', { score: criteria.disputeTrigger.split('delta > ')[1] || '20' })}</span>
                   </div>
@@ -208,48 +208,48 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
           {/* Submissions feed list */}
           <div className="space-y-3 pt-2">
-            <h4 className="text-xs uppercase font-mono font-bold tracking-wider text-slate-400">{t('minerCommitments', { count: task.minerSubmissions.length })}</h4>
+            <h4 className="text-xs uppercase font-mono font-bold tracking-wider text-[#8e7564]">{t('minerCommitments', { count: task.minerSubmissions.length })}</h4>
             {task.minerSubmissions.length === 0 ? (
-              <div className="text-center py-6 bg-slate-950/20 rounded-xl border border-slate-850 border-dashed">
-                <span className="text-xs text-slate-500">{t('noSubmissionsYet')}</span>
+              <div className="text-center py-6 bg-[#0f0a08]/20 rounded-xl border border-[#4a3427] border-dashed">
+                <span className="text-xs text-[#8e7564]">{t('noSubmissionsYet')}</span>
               </div>
             ) : (
               <div className="space-y-3">
                 {task.minerSubmissions.map((sub) => (
-                  <div key={sub.id} className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-3">
+                  <div key={sub.id} className="bg-[#0f0a08] p-4 rounded-xl border border-[#4a3427] space-y-3">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-mono text-slate-300 font-semibold">{sub.workerAddress}</span>
+                      <span className="font-mono text-[#ebdcb9] font-semibold">{sub.workerAddress}</span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                        sub.status === 'Settled' ? 'bg-brand-emerald/10 text-brand-emerald border border-brand-emerald/20' :
-                        sub.status === 'Scored' ? 'bg-brand-indigo/10 text-brand-indigo border border-brand-indigo/20' :
-                        'bg-slate-800 text-slate-400'
+                        sub.status === 'Settled' ? 'bg-[#849c44]/10 text-[#849c44] border border-[#849c44]/25' :
+                        sub.status === 'Scored' ? 'bg-[#dfab6c]/10 text-[#dfab6c] border border-[#dfab6c]/25' :
+                        'bg-[#1c1310] text-[#8e7564] border border-[#4a3427]'
                       }`}>
                         {sub.status === 'Settled' ? t('statusSettled') : sub.status === 'Scored' ? t('statusScored') : t('statusUnscored')}
                       </span>
                     </div>
 
-                    <div className="bg-slate-900 border border-slate-850 p-2.5 rounded text-xs font-mono text-slate-400 overflow-x-auto whitespace-pre">
+                    <div className="bg-[#150f0c] border border-[#4a3427] p-2.5 rounded text-xs font-mono text-[#a58d7c] overflow-x-auto whitespace-pre">
                       {sub.content}
                     </div>
 
                     {sub.evaluation && (
-                      <div className="pt-2 border-t border-slate-850 space-y-2">
+                      <div className="pt-2 border-t border-[#4a3427] space-y-2">
                         <div className="grid grid-cols-3 gap-2 text-center">
-                          <div className="bg-slate-900/60 p-2 rounded">
-                            <span className="block text-[10px] text-slate-500 uppercase">{t('valiScore')}</span>
-                            <span className="text-sm font-mono font-bold text-white">{sub.evaluation.validatorScore}</span>
+                          <div className="bg-[#150f0c] p-2 rounded">
+                            <span className="block text-[10px] text-[#8e7564] uppercase">{t('valiScore')}</span>
+                            <span className="text-sm font-mono font-bold text-[#ebdcb9]">{sub.evaluation.validatorScore}</span>
                           </div>
-                          <div className="bg-slate-900/60 p-2 rounded">
-                            <span className="block text-[10px] text-slate-500 uppercase">{t('aiScore')}</span>
-                            <span className="text-sm font-mono font-bold text-brand-emerald">{sub.evaluation.aiScore}</span>
+                          <div className="bg-[#150f0c] p-2 rounded">
+                            <span className="block text-[10px] text-[#8e7564] uppercase">{t('aiScore')}</span>
+                            <span className="text-sm font-mono font-bold text-[#849c44]">{sub.evaluation.aiScore}</span>
                           </div>
-                          <div className="bg-slate-900/60 p-2 rounded">
-                            <span className="block text-[10px] text-slate-500 uppercase">{t('settledScore')}</span>
-                            <span className="text-sm font-mono font-bold text-brand-indigo">{sub.evaluation.finalScore}</span>
+                          <div className="bg-[#150f0c] p-2 rounded">
+                            <span className="block text-[10px] text-[#8e7564] uppercase">{t('settledScore')}</span>
+                            <span className="text-sm font-mono font-bold text-[#dfab6c]">{sub.evaluation.finalScore}</span>
                           </div>
                         </div>
-                        <div className="text-xs text-slate-400">
-                          <span className="font-semibold text-slate-300">{t('auditorReport')}</span>
+                        <div className="text-xs text-[#a58d7c]">
+                          <span className="font-semibold text-[#ebdcb9]">{t('auditorReport')}</span>
                           {locale === 'zh'
                             ? sub.evaluation.aiExplanation
                                 .replace('AI audit completed with precision', 'AI 独立审计结果已安全生成。')
@@ -267,21 +267,21 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         </div>
 
         {/* Footer controls */}
-        <div className="bg-slate-950 p-5 border-t border-slate-850 flex items-center justify-between">
-          <div className="text-xs text-slate-500 flex items-center gap-1.5">
-            <Wallet className="w-4 h-4 text-brand-cyan" />
+        <div className="bg-[#0f0a08] p-5 border-t border-[#4a3427] flex items-center justify-between">
+          <div className="text-xs text-[#8e7564] flex items-center gap-1.5">
+            <Wallet className="w-4 h-4 text-[#dfab6c]" />
             {t('coboEscrowBudget')}
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => onMine(task)}
-              className="px-5 py-2 bg-brand-indigo hover:bg-brand-indigo/80 text-white font-bold text-sm rounded-lg transition flex items-center gap-1.5 shadow-lg shadow-brand-indigo/10 cursor-pointer"
+              className="px-5 py-2 bg-[#9e331b] hover:bg-[#b03d27] text-[#f4e4c1] font-serif font-black text-sm rounded-lg border border-[#6e2211] transition flex items-center gap-1.5 shadow-md shadow-black/30 cursor-pointer uppercase tracking-wide"
             >
               <Cpu className="w-4 h-4" /> {t('btnWannaMine')}
             </button>
             <button
               onClick={() => onValidate(task)}
-              className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm rounded-lg border border-slate-700 transition cursor-pointer"
+              className="px-5 py-2 bg-[#e3d3ad] hover:bg-[#d4c096] text-[#3a2415] font-serif font-bold text-sm rounded-lg border border-[#9c7d4f] transition cursor-pointer"
             >
               {t('btnWannaValidate')}
             </button>
