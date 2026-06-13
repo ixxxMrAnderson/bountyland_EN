@@ -24,7 +24,12 @@ import {
   X,
   ChevronLeft,
   Award,
-  ShieldCheck
+  ShieldCheck,
+  CheckCircle2,
+  ArrowDownToLine,
+  FileText,
+  FileArchive,
+  Download
 } from 'lucide-react';
 
 import { CoboWalletWidget } from './components/CoboWalletWidget';
@@ -159,8 +164,77 @@ export default function App() {
   const [datasetBounty, setDatasetBounty] = useState('0.180');
 
   // Submit and loading lifecycle parameters
-  const [formSubmittingStage, setFormSubmittingStage] = useState<'none' | 'analyzing' | 'proposal_ready'>('none');
+  const [formSubmittingStage, setFormSubmittingStage] = useState<'none' | 'analyzing' | 'proposal_ready' | 'completed_download'>('none');
   const [draftedProposal, setDraftedProposal] = useState<any>(null);
+
+  // Self-created task warrant management
+  const [modifyingTask, setModifyingTask] = useState<Task | null>(null);
+  const [modifyTitle, setModifyTitle] = useState('');
+  const [modifyDescription, setModifyDescription] = useState('');
+  const [modifyBounty, setModifyBounty] = useState('0.150');
+
+  const handleCancelWarrant = (targetTask: Task) => {
+    setTasks((prev) => prev.filter((t) => t.id !== targetTask.id));
+    setWallet((prev) => ({
+      ...prev,
+      balance: parseFloat((prev.balance + targetTask.rewardPool).toFixed(4))
+    }));
+    triggerAlarm(
+      'success',
+      locale === 'zh'
+        ? `悬赏挂单「${targetTask.title}」已成功撤回，质押金 ${targetTask.rewardPool} ETH 已全额退回到您的 MetaMask 钱包！`
+        : `Warrant "${targetTask.title}" canceled. Escrow deposit of ${targetTask.rewardPool} ETH refunded successfully!`
+    );
+  };
+
+  const handleStartModifyDemand = (task: Task) => {
+    setModifyingTask(task);
+    setModifyTitle(task.title);
+    setModifyDescription(task.description);
+    setModifyBounty(task.rewardPool.toString());
+  };
+
+  const handleSaveModifiedDemand = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modifyingTask) return;
+
+    const newPool = parseFloat(modifyBounty) || 0.1;
+    const diff = newPool - modifyingTask.rewardPool;
+
+    if (diff > 0 && wallet.balance < diff) {
+      triggerAlarm('error', locale === 'zh' ? '算力契约追加失败：MetaMask 钱包余额不足！' : 'Pact modification failed: Insufficient wallet balance!');
+      return;
+    }
+
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === modifyingTask.id) {
+          return {
+            ...t,
+            title: modifyTitle,
+            description: modifyDescription,
+            rewardPool: newPool,
+            depositAmount: newPool,
+          };
+        }
+        return t;
+      })
+    );
+
+    setWallet((prev) => ({
+      ...prev,
+      balance: parseFloat((prev.balance - diff).toFixed(4))
+    }));
+
+    triggerAlarm(
+      'success',
+      locale === 'zh'
+        ? '赏金悬赏单已成功修改！契约内容和多签保证金等参数已在链上实时更新。'
+        : 'Warrant parameters and escrow deposit updated successfully!'
+    );
+
+    setModifyingTask(null);
+  };
 
   // Global Alerts feed
   const [feedback, setFeedback] = useState<{ type: 'success' | 'alert' | 'error'; message: string } | null>(null);
@@ -268,18 +342,24 @@ export default function App() {
 
     const newTaskId = 'task-' + (tasks.length + 1);
     const assignedName = draftedProposal.type === 'web3' ? 'Platform Debug Killer' : 'Platform Data Mining Agent';
+    const isWeb3 = draftedProposal.type === 'web3';
+    const isAgentSolution = draftedProposal.type === 'web3' || draftedProposal.type === 'dataset';
 
     const newlyDeployed: Task = {
       id: newTaskId,
       title: draftedProposal.title,
-      description: draftedProposal.description + ` Checked against custom verification criteria options. Handed over to our assigned specialist: ${assignedName}.`,
+      description: draftedProposal.description + (isAgentSolution 
+        ? (isWeb3 
+          ? ` Successfully debugged by platform agent. Fixes deployed and downloadable archive generated.` 
+          : ` Successfully collected and curated by platform agent. Secured dataset generated within sandbox environment.`)
+        : ` Checked against custom verification criteria options. Handed over to our assigned specialist: ${assignedName}.`),
       createdAt: new Date().toISOString(),
-      deadline: draftedProposal.type === 'web3' ? '24h remaining' : '48h remaining',
+      deadline: isAgentSolution ? 'Completed' : '24h remaining',
       rewardPool: draftedProposal.rewardPool,
       depositAmount: draftedProposal.depositAmount,
       aiAuditEnabled: true,
       aiThresholdLine: draftedProposal.aiThresholdLine,
-      status: 'Agent is working', // Custodian state matching Section 2
+      status: isAgentSolution ? 'Completed' : 'Agent is working', 
       assignedAgent: assignedName, // Assigns Agent name matching Section 4
       criteriaName: draftedProposal.criteriaName,
       selectedCriteriaOption: draftedProposal.selectedCriteriaOption,
@@ -287,8 +367,36 @@ export default function App() {
       taskURI: `ipfs://Qm${generateHash('task_')}`,
       orderURI: `ipfs://Qm${generateHash('order_')}`,
       criteriaHash: generateHash('0x'),
-      minerSubmissionsCount: 0,
-      minerSubmissions: []
+      minerSubmissionsCount: isAgentSolution ? 1 : 0,
+      minerSubmissions: isAgentSolution ? [
+        {
+          id: 'sub-' + Date.now(),
+          taskId: newTaskId,
+          workerAddress: '0x3f5ce...d88a',
+          submittedAt: new Date().toISOString(),
+          content: isWeb3 
+            ? `// Bug Verification Log:\n// Intercepted ${web3IssueType} in target repository files.\n// All sanity compile tests passed. Verification completed and assets ready.\n// Artifact path: web3-debug-archive-${newTaskId}.zip`
+            : `// Dataset Extraction & Cleaning Log:\n// Gathered high-entropy items for topic: ${datasetDomain}.\n// Parsed and sanitized ${datasetSize} lines according to specified json schema.\n// Integrity checked, redundant items removed, quality index scored 100/100.\n// Artifact path: dataset-${datasetDomain.toLowerCase().replace(/\s+/g, '_')}-${newTaskId}.zip`,
+          outputURI: `ipfs://Qm${generateHash('out_')}`,
+          outputHash: generateHash('0x'),
+          status: 'Settled',
+          evaluation: {
+            validatorAddress: '0xSystemAgent',
+            validatorScore: 100,
+            validatorReason: isWeb3 
+              ? 'Fully resolved all security exploit vectors in compilation sandbox.'
+              : 'Synthesized target records matching requested diversity metrics and schema criteria without noise.',
+            aiScore: 100,
+            aiExplanation: isWeb3 
+              ? 'Dynamic verification sandbox reproduced the secure patch successfully.'
+              : 'No duplicate records found, JSONL syntax audit checking scored high token entropy.',
+            finalScore: 100,
+            delta: 12,
+            reputationChange: 5,
+            settled: true
+          }
+        }
+      ] : []
     };
 
     setTasks((prev) => [newlyDeployed, ...prev]);
@@ -298,17 +406,26 @@ export default function App() {
       balance: parseFloat((prev.balance - draftedProposal.rewardPool).toFixed(4))
     }));
 
-    triggerAlarm('success', locale === 'zh' ? `托管锁仓契约签署就绪！警长 ${assignedName} 已被成功分派并开始作业。` : `MetaMask pact locked and funded successfully! ${assignedName} is now on active duty.`);
+    if (isAgentSolution) {
+      if (isWeb3) {
+        triggerAlarm('success', locale === 'zh' ? `智能安全代扣成功！平台已极速生成并锁定了漏洞修复并提供下载。` : `MetaMask Escrow Pact locked successfully! Vulnerability patches and secure document compiled.`);
+      } else {
+        triggerAlarm('success', locale === 'zh' ? `智能多签契约代扣成功！平台分布式算力已完成数据集搜集与高质量去噪并提供下载。` : `MetaMask escrow locked successfully! High entropy dataset generated, crawled and sanitized.`);
+      }
+      setFormSubmittingStage('completed_download');
+    } else {
+      triggerAlarm('success', locale === 'zh' ? `托管锁仓契约签署就绪！警长 ${assignedName} 已被成功分派并开始作业。` : `MetaMask pact locked and funded successfully! ${assignedName} is now on active duty.`);
+      
+      // Refresh states
+      setDraftedProposal(null);
+      setFormSubmittingStage('none');
+      setDefinePath(null);
 
-    // Refresh states
-    setDraftedProposal(null);
-    setFormSubmittingStage('none');
-    setDefinePath(null);
-
-    // Auto navigate to market hall
-    setTimeout(() => {
-      setActiveTab('ActiveTasks');
-    }, 1000);
+      // Auto navigate to market hall
+      setTimeout(() => {
+        setActiveTab('ActiveTasks');
+      }, 1000);
+    }
   };
 
   // Create Task conversational flow dispatch
@@ -463,7 +580,8 @@ export default function App() {
         orderURI: `ipfs://Qm${generateHash('order_')}`,
         criteriaHash: generateHash('0x'),
         minerSubmissionsCount: 0,
-        minerSubmissions: []
+        minerSubmissions: [],
+        isCreatedByCurrentUser: true
       };
 
       // Add to main catalogs
@@ -1349,6 +1467,192 @@ export default function App() {
                       </div>
                     )}
 
+                    {formSubmittingStage === 'completed_download' && (
+                      <div className="space-y-6 animate-scale-up text-left">
+                        
+                        {/* Status Stamp Alert */}
+                        <div className="bg-[#1c2e1a] border-2 border-[#849c44] p-5 rounded space-y-4 flex flex-col md:flex-row items-center md:items-start gap-4">
+                          <CheckCircle2 className="w-10 h-10 text-[#849c44] shrink-0" />
+                          <div className="space-y-1 text-center md:text-left flex-1">
+                            <h4 className="font-serif font-black text-sm uppercase text-[#849c44]">
+                              {locale === 'zh' ? '自主结算成功 · 代码级漏洞修复已就绪' : 'PACT SETTLED • CRYPTOGRAPHIC REMEDIATION SECURED'}
+                            </h4>
+                            <p className="text-[11px] text-[#ebdcb9]/80 font-sans leading-relaxed">
+                              {locale === 'zh'
+                                ? `由于您启用了 Platform Debug Agent 加速机制，系统在代扣划转 ${web3Bounty} ETH 至托管池的同时，智能虚拟机沙盒已提前验证并自主完成了针对 ${web3IssueType} 的全套修复审计。下面是以前述对话阶段整合的代维成果。`
+                                : `With Platform Debug Agent acceleration engaged, ${web3Bounty} ETH has been successfully escrowed and the sandbox VM has automatically complied, passing 100% of the vulnerability mitigations.`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Interactive Two-step Dialog Recap */}
+                        <div className="space-y-4">
+                          <h5 className="font-mono text-[10px] text-[#dfab6c] uppercase font-black tracking-wider">
+                            {locale === 'zh' ? '▎核心诊断阶段对话存档 (Internal Dialogue Logs)' : '▎DIALOGUE RECAP LOGS'}
+                          </h5>
+
+                          <div className="space-y-3.5">
+                            {/* Dialogue Step 1 */}
+                            <div className="bg-[#150f0c] border border-[#4a3427] p-4 rounded-lg flex items-start gap-3.5 relative overflow-hidden group">
+                              <div className="absolute top-1 right-2 text-[8px] font-mono text-[#4a3427]/60 uppercase select-none">Stage 01: Audit</div>
+                              <div className="w-9 h-9 rounded bg-[#bf311d]/20 border border-[#bf311d]/40 flex items-center justify-center shrink-0">
+                                <Bot className="w-5 h-5 text-[#dfab6c]" />
+                              </div>
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-serif font-black text-xs text-[#dfab6c]">Platform Debug Agent</span>
+                                  <span className="text-[9px] font-mono text-[#8e7564] uppercase font-bold px-1.5 py-0.5 bg-black/30 rounded">{locale === 'zh' ? '静态扫描' : 'SCANNER'}</span>
+                                </div>
+                                <p className="text-[11.5px] font-sans text-[#ebdcb9] leading-relaxed">
+                                  {locale === 'zh'
+                                    ? `「尊敬的验证节点及开发者，我们对代码库 ${web3RepoUrl} 中指定的合约模块进行了深度遍历。在静态代码扫描阶段，我们动态定位到针对 ${web3IssueType} 中由于不安全的状态读写、事件分派或控制结构导致的致命漏洞隐患。当前生成了 sandbox 评分规则：${draftedProposal?.selectedCriteriaOption?.name || '安全断言矩阵'}。现移交给沙箱执行器进行动态攻击拟合与自动补丁构造。」`
+                                    : `"Greetings. I have indexed the target files at ${web3RepoUrl}. I detected a critical pattern leakage resembling ${web3IssueType} where transaction re-entry or insecure variable propagation is allowed. Generated custom grading rubric: ${draftedProposal?.selectedCriteriaOption?.name || 'Axiom-01 Rule'}. Handing over for dynamic runtime patching now."`}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Dialogue Step 2 */}
+                            <div className="bg-[#150f0c] border border-[#4a3427] p-4 rounded-lg flex items-start gap-3.5 relative overflow-hidden group">
+                              <div className="absolute top-1 right-2 text-[8px] font-mono text-[#4a3427]/60 uppercase select-none">Stage 02: Remediate</div>
+                              <div className="w-9 h-9 rounded bg-[#bf311d]/20 border border-[#bf311d]/40 flex items-center justify-center shrink-0">
+                                <Cpu className="w-5 h-5 text-[#dfab6c]" />
+                              </div>
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-serif font-black text-xs text-[#dfab6c]">Platform Debug Killer</span>
+                                  <span className="text-[9px] font-mono text-[#8e7564] uppercase font-bold px-1.5 py-0.5 bg-black/30 rounded">{locale === 'zh' ? '自动化补丁' : 'PATCHING v1.0'}</span>
+                                </div>
+                                <p className="text-[11.5px] font-sans text-[#ebdcb9] leading-relaxed">
+                                  {locale === 'zh'
+                                    ? `「漏洞修补程序成功生成并进行了 EVM 二进制插桩验证！我们在沙箱中复现了攻击行为，并在引入重入阻断锁、边界对齐防御后对虚拟机重新编译。单元编译通过率为 100%。多签契约的代扣已锁定在区块网络上，我们现在签发修复文档与可下载补丁，全部单元验证指标均已评分为 100/100。」`
+                                    : `"Patch successfully constructed. We deployed an anti-exploit wrapper around the checked scopes in the ${web3VMType} virtual container. Sandboxed trace testing passed 100% of attack vectors. Verified audit is complete. Escrow release triggers generated."`}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Deliverables / Download Form */}
+                        <div className="bg-[#1c1310] border-2 border-[#dfab6c] p-5 rounded space-y-4">
+                          <div className="flex items-center justify-between border-b border-[#4a3427] pb-2">
+                            <h4 className="font-serif font-black text-xs uppercase text-[#dfab6c] flex items-center gap-1.5">
+                              <Download className="w-4 h-4 text-[#dfab6c]" />
+                              {locale === 'zh' ? '受保护的算力成果交付下载面板' : 'SECURE DELIVERABLES RETRIEVAL FORM'}
+                            </h4>
+                            <span className="font-mono text-[9px] text-[#8e7564]">{locale === 'zh' ? '数字哈希凭证已验证' : 'BLOCK PROOF ATTESTED'}</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Deliverable 1: Report */}
+                            <div className="bg-[#150f0c] border border-[#4a3427] p-4 rounded flex flex-col justify-between space-y-3">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <FileText className="w-4 h-4 text-[#dfab6c]" />
+                                  <span className="font-serif font-black text-xs text-[#ebdcb9] uppercase">
+                                    {locale === 'zh' ? 'EVM 可视化调试诊断书.md' : 'EVM Diagnostic Report (.md)'}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-[#a58d7c] font-sans leading-relaxed">
+                                  {locale === 'zh'
+                                    ? '包含脆弱性溯源、静态汇编跟踪断点、威胁强度建模与修复代码 Diff 段落。'
+                                    : 'Detailed documentation containing contract vulnerability traces, threat vectors identified, and code diff sections.'}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  // Trigger Report Download
+                                  const markdownText = `# security audit & debugging report\n# platform debug killer - multi-consensus clearance\n# timestamp: ${new Date().toLocaleDateString()}\n\n## 1. codebase target\n- repository: ${web3RepoUrl}\n- VM environment: ${web3VMType}\n- target address: ${web3ContractAddr || 'Not deployed (local sandbox)'}\n\n## 2. vulnerability identification\n- threat category: ${web3IssueType}\n- threat level: CRITICAL RISK\n- audited files: ${web3FileScope || 'all repository source files'}\n\n### findings recap:\nOur platform agents simulated multiple state re-entrancy and access exploit vectors against your provided Solidity/Move specifications. An active vulnerability was replicated successfully in the preliminary compile run.\n\n## 3. automated patch deployment\n- remediation method: Applied strict reentrancy guards, mutex locking variables, and validated address check gates.\n- sandbox compile status: SUCCESS\n- unit test coverage: 100% (all mock attack vectors fully deflected and locked)\n\n## 4. escrow ledger summary\n- reward locked: ${web3Bounty} ETH\n- status: Settled / Escrow Safe Released to Solver Space\n- transaction footprint: 0x${generateHash('tx_')}\n`;
+                                  const blob = new Blob([markdownText], { type: 'text/markdown' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `web3_security_audit_report_${web3IssueType.toLowerCase().replace(' ', '_')}.md`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                  triggerAlarm('success', locale === 'zh' ? '安全审计文档下载已开始！' : 'Security audit report download started!');
+                                }}
+                                className="w-full bg-[#bf311d]/10 hover:bg-[#bf311d]/20 text-[#dfab6c] border border-[#bf311d]/30 py-1.5 rounded font-mono text-[10px] uppercase font-bold tracking-wider transition flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <ArrowDownToLine className="w-3.5 h-3.5" />
+                                <span>{locale === 'zh' ? '极速下载诊断书' : 'DOWNLOAD DIAGNOSIS'}</span>
+                              </button>
+                            </div>
+
+                            {/* Deliverable 2: Zip of Code */}
+                            <div className="bg-[#150f0c] border border-[#4a3427] p-4 rounded flex flex-col justify-between space-y-3">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <FileArchive className="w-4 h-4 text-[#dfab6c]" />
+                                  <span className="font-serif font-black text-xs text-[#ebdcb9] uppercase">
+                                    {locale === 'zh' ? '安全补丁及重置测试包.zip' : 'Secured Patch Deploys (.zip)'}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-[#a58d7c] font-sans leading-relaxed">
+                                  {locale === 'zh'
+                                    ? '包含修复后的源码文件、本地 Hardhat/Foundry 伪装复现脚本及一键防御部署指南。'
+                                    : 'Contains corrected repository source code files, Foundry deployment test scripts, and local exploit checkers.'}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  // Trigger ZIP download fallback
+                                  const zipPlaceholderContent = `[ZIP ARCHIVE PLACEHOLDER]\nThis archive contains the patched source files for:\n- Repository: ${web3RepoUrl}\n- Issue Resolved: ${web3IssueType}\n- Compiled VM: ${web3VMType}\n\nFiles:\n1. patched_contracts/SecureContract.sol (IncludesMutexLocks)\n2. reproduction_checks/exploit_repro.py (X-Deflection Verified)\n3. deploy_patch_ledger.json\n\nAll security checks has been completed successfully inside the cognitive compiler sandbox.\n`;
+                                  const blob = new Blob([zipPlaceholderContent], { type: 'text/plain' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `${web3IssueType.toLowerCase().replace(' ', '_')}_patched_source.zip`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                  triggerAlarm('success', locale === 'zh' ? '调试补丁压缩包下载已开始！' : 'Debug patched source ZIP download started!');
+                                }}
+                                className="w-full bg-[#bf311d]/10 hover:bg-[#bf311d]/20 text-[#dfab6c] border border-[#bf311d]/30 py-1.5 rounded font-mono text-[10px] uppercase font-bold tracking-wider transition flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <ArrowDownToLine className="w-3.5 h-3.5" />
+                                <span>{locale === 'zh' ? '极速下载补丁包' : 'DOWNLOAD PATCH ZIP'}</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Quick details */}
+                          <div className="bg-[#150f0c] px-3.5 py-2.5 border border-[#4a3427] rounded text-[10px] font-mono text-[#a58d7c] flex flex-wrap gap-x-6 gap-y-1.5">
+                            <div><strong>{locale === 'zh' ? '对账签名：' : 'Sig: '}</strong>0x9dF21...8F10</div>
+                            <div><strong>{locale === 'zh' ? '出块高度：' : 'Block: '}</strong>#1982512</div>
+                            <div><strong>{locale === 'zh' ? '托管结算：' : 'Escrow: '}</strong>{web3Bounty} ETH (Paid)</div>
+                          </div>
+                        </div>
+
+                        {/* Reset & Navigation bar */}
+                        <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Reset state and select another AI agent service
+                              setDefinePath(null);
+                              setFormSubmittingStage('none');
+                              setDraftedProposal(null);
+                            }}
+                            className="flex-1 py-2.5 bg-transparent border border-[#4a3427] text-[#ebdcb9] font-serif font-black text-xs uppercase hover:bg-black/20 rounded transition text-center cursor-pointer"
+                          >
+                            {locale === 'zh' ? '委托另一个漏洞审计单' : 'AUDIT ANOTHER CONTRACT'}
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Direct to Registries
+                              setActiveTab('Activities');
+                            }}
+                            className="flex-1 py-2.5 bg-[#bf311d]/10 text-[#dfab6c] border border-[#bf311d]/40 text-xs font-serif font-black uppercase tracking-wider rounded transition flex items-center justify-center gap-2 cursor-pointer hover:bg-[#bf311d]/20"
+                          >
+                            <Coins className="w-4.5 h-4.5" />
+                            <span>{locale === 'zh' ? '前往算力审计账单' : 'GO TO ESCROW REGISTRY'}</span>
+                          </button>
+                        </div>
+
+                      </div>
+                    )}
+
                   </div>
                 )}
 
@@ -1637,6 +1941,190 @@ export default function App() {
                           >
                             <Check className="w-4 h-4" />
                             <span>{locale === 'zh' ? '代扣锁仓并发布分布式算力任务' : 'APPROVE ESCROW & DEPLOY PACT'}</span>
+                          </button>
+                        </div>
+
+                      </div>
+                    )}
+
+                    {formSubmittingStage === 'completed_download' && (
+                      <div className="space-y-6 animate-scale-up text-left">
+                        
+                        {/* Status Stamp Alert */}
+                        <div className="bg-[#1c2e1a] border-2 border-[#849c44] p-5 rounded space-y-4 flex flex-col md:flex-row items-center md:items-start gap-4">
+                          <CheckCircle2 className="w-10 h-10 text-[#849c44] shrink-0" />
+                          <div className="space-y-1 text-center md:text-left flex-1">
+                            <h4 className="font-serif font-black text-sm uppercase text-[#849c44]">
+                              {locale === 'zh' ? '自主结算成功 · 高熵去噪数据集已就绪' : 'PACT SETTLED • HIGH ENTROPY CORPUS GENERATED'}
+                            </h4>
+                            <p className="text-[11px] text-[#ebdcb9]/80 font-sans leading-relaxed">
+                              {locale === 'zh'
+                                ? `由于您启用了 Platform Data Mining Agent 搜集机制，系统在代扣划转 ${datasetBounty} ETH 至托管池的同时，智能数据索引沙盒已提前完成了针对 ${datasetDomain} 的全套语料搜集、质量校正与剔重去噪。下面是以前述对账阶段整合的交付成果。`
+                                : `With Platform Data Mining Agent acceleration engaged, ${datasetBounty} ETH has been successfully escrowed and our mining sandbox has automatically compiled the cleaned corpus for ${datasetDomain}.`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Interactive Two-step Dialog Recap */}
+                        <div className="space-y-4">
+                          <h5 className="font-mono text-[10px] text-[#dfab6c] uppercase font-black tracking-wider">
+                            {locale === 'zh' ? '▎数据搜集与清洗对话研判存档 (Internal Dialogue Logs)' : '▎DIALOGUE RECAP LOGS'}
+                          </h5>
+
+                          <div className="space-y-3.5">
+                            {/* Dialogue Step 1 */}
+                            <div className="bg-[#150f0c] border border-[#4a3427] p-4 rounded-lg flex items-start gap-3.5 relative overflow-hidden group">
+                              <div className="absolute top-1 right-2 text-[8px] font-mono text-[#4a3427]/60 uppercase select-none">Stage 01: Scrape & Extraction</div>
+                              <div className="w-9 h-9 rounded bg-[#849c44]/20 border border-[#849c44]/40 flex items-center justify-center shrink-0">
+                                <Bot className="w-5 h-5 text-[#dfab6c]" />
+                              </div>
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-serif font-black text-xs text-[#dfab6c]">Platform Data Mining Agent</span>
+                                  <span className="text-[9px] font-mono text-[#8e7564] uppercase font-bold px-1.5 py-0.5 bg-black/30 rounded">{locale === 'zh' ? '搜集引擎' : 'MINER'}</span>
+                                </div>
+                                <p className="text-[11.5px] font-sans text-[#ebdcb9] leading-relaxed">
+                                  {locale === 'zh'
+                                    ? `「尊敬的验证节点，我们对您指定的算力话题 ${datasetDomain} 进行了全方位原始文本遍历捕获。由于在 ${datasetUrgency} 的标准清算期，我们累计排布出高质量推理语料、链上CoT等丰富样本行。现过滤多余低质杂音，移交给清洗模块对齐您指定的评分规则：${draftedProposal?.selectedCriteriaOption?.name || '高密度词流模式'}。」`
+                                    : `"Greetings. I have traversed public networks and indexed corpus regarding ${datasetDomain}. Filtered low-semantic text slices. Handing over for strict schema validation structure under ${draftedProposal?.selectedCriteriaOption?.name || 'High Entropy Rubric'}"`}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Dialogue Step 2 */}
+                            <div className="bg-[#150f0c] border border-[#4a3427] p-4 rounded-lg flex items-start gap-3.5 relative overflow-hidden group">
+                              <div className="absolute top-1 right-2 text-[8px] font-mono text-[#4a3427]/60 uppercase select-none">Stage 02: Verification & Alignment</div>
+                              <div className="w-9 h-9 rounded bg-[#849c44]/20 border border-[#849c44]/40 flex items-center justify-center shrink-0">
+                                <Cpu className="w-5 h-5 text-[#dfab6c]" />
+                              </div>
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-serif font-black text-xs text-[#dfab6c]">Platform Data Mining Agent</span>
+                                  <span className="text-[9px] font-mono text-[#8e7564] uppercase font-bold px-1.5 py-0.5 bg-black/30 rounded">{locale === 'zh' ? '算力清洗机' : 'CLEANER v1.0'}</span>
+                                </div>
+                                <p className="text-[11.5px] font-sans text-[#ebdcb9] leading-relaxed">
+                                  {locale === 'zh'
+                                    ? `「提取到的 ${datasetSize} 列高质量行已统一完成了针对 ${datasetSchema} 的高精对齐；沙盒检验器中进行的词义除多测算率为 100%。我们现在签发可供极速下载的 JSONL 结构数据集及相应的元数据诊断备忘录，全部校验评分为 100/100。」`
+                                    : `"Compiled target records aligned with requested JSON Schema: ${datasetSchema}. Deduplication rate of 100% verified inside semantic compiler sandbox. Released files are certified safe to retrieve."`}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Deliverables / Download Form */}
+                        <div className="bg-[#1c1310] border-2 border-[#dfab6c] p-5 rounded space-y-4">
+                          <div className="flex items-center justify-between border-b border-[#4a3427] pb-2">
+                            <h4 className="font-serif font-black text-xs uppercase text-[#dfab6c] flex items-center gap-1.5">
+                              <Download className="w-4 h-4 text-[#dfab6c]" />
+                              {locale === 'zh' ? '受保护的高熵算力成果下载交付面板' : 'SECURE DELIVERABLES RETRIEVAL FORM'}
+                            </h4>
+                            <span className="font-mono text-[9px] text-[#8e7564]">{locale === 'zh' ? '数字签名证书已验证' : 'BLOCK PROOF ATTESTED'}</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Deliverable 1: Report */}
+                            <div className="bg-[#150f0c] border border-[#4a3427] p-4 rounded flex flex-col justify-between space-y-3">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <FileText className="w-4 h-4 text-[#dfab6c]" />
+                                  <span className="font-serif font-black text-xs text-[#ebdcb9] uppercase">
+                                    {locale === 'zh' ? '高精数据集清洗审计书.md' : 'Dataset Audit Report (.md)'}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-[#a58d7c] font-sans leading-relaxed">
+                                  {locale === 'zh'
+                                    ? '包含数据去噪链路流、语言高熵图谱对账表、合规性检验与多签存单哈希凭据。'
+                                    : 'A compilation report mapping dataset entropy structures, token-density metrics, and escrow release proof.'}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  // Trigger Report Download
+                                  const markdownText = `# high entropy dataset curation & curation report\n# platform data mining agent\n# timestamp: ${new Date().toLocaleDateString()}\n\n## 1. target topic\n- domain label: ${datasetDomain}\n- expected size: ${datasetSize} items\n- scheme rules: ${datasetSchema}\n\n## 2. cleaning & curation stats\n- target semantic records: ${datasetSize}\n- duplicate elements suppressed: 1,492\n- structure check syntax: 100% compliant JSON Lines\n- scoring benchmark: 100/100 (excellence metric)\n\n## 3. contract ledger\n- budget locked: ${datasetBounty} ETH\n- transaction signature: 0x${generateHash('tx_')}\n`;
+                                  const blob = new Blob([markdownText], { type: 'text/markdown' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `${datasetDomain.toLowerCase().replace(/\s+/g, '_')}_dataset_audit_report.md`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                  triggerAlarm('success', locale === 'zh' ? '数据审计诊断书下载已开始！' : 'Dataset audit report download started!');
+                                }}
+                                className="w-full bg-[#849c44]/10 hover:bg-[#849c44]/20 text-[#dfab6c] border border-[#849c44]/30 py-1.5 rounded font-mono text-[10px] uppercase font-bold tracking-wider transition flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <ArrowDownToLine className="w-3.5 h-3.5" />
+                                <span>{locale === 'zh' ? '极速下载审计书' : 'DOWNLOAD REPORT'}</span>
+                              </button>
+                            </div>
+
+                            {/* Deliverable 2: Zip of Code */}
+                            <div className="bg-[#150f0c] border border-[#4a3427] p-4 rounded flex flex-col justify-between space-y-3">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <FileArchive className="w-4 h-4 text-[#dfab6c]" />
+                                  <span className="font-serif font-black text-xs text-[#ebdcb9] uppercase">
+                                    {locale === 'zh' ? '清洗后高熵格式化数据集.zip' : 'Cleaned Dataset Corpus (.zip)'}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-[#a58d7c] font-sans leading-relaxed">
+                                  {locale === 'zh'
+                                    ? '包含完整对齐 schema 后输出的高纯度 jsonl 纯文本算力语料、词典及训练验证对准配表。'
+                                    : 'Contains curated high-density JSON Lines file ready for direct training indexing.'}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  // Trigger ZIP download fallback
+                                  const zipPlaceholderContent = `[JSONL SPECIFIED CORPUS PLACEHOLDER]\nMatched target schema: ${datasetSchema}\nTopic: ${datasetDomain}\nExpected rows: ${datasetSize}\n\nThis archive contains the cleaned files generated inside the z.ai cognitive mining engine.\n`;
+                                  const blob = new Blob([zipPlaceholderContent], { type: 'text/plain' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `${datasetDomain.toLowerCase().replace(/\s+/g, '_')}_dataset_curated_source.zip`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                  triggerAlarm('success', locale === 'zh' ? '格式化数据集压缩包下载已开始！' : 'Curated Dataset ZIP download started!');
+                                }}
+                                className="w-full bg-[#849c44]/10 hover:bg-[#849c44]/20 text-[#dfab6c] border border-[#849c44]/30 py-1.5 rounded font-mono text-[10px] uppercase font-bold tracking-wider transition flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <ArrowDownToLine className="w-3.5 h-3.5" />
+                                <span>{locale === 'zh' ? '极速下载数据集.zip' : 'DOWNLOAD DATASET ZIP'}</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Quick details */}
+                          <div className="bg-[#150f0c] px-3.5 py-2.5 border border-[#4a3427] rounded text-[10px] font-mono text-[#a58d7c] flex flex-wrap gap-x-6 gap-y-1.5">
+                            <div><strong>{locale === 'zh' ? '对账物理哈希：' : 'Sig: '}</strong>0x8eB17...4C21</div>
+                            <div><strong>{locale === 'zh' ? '块高度：' : 'Block: '}</strong>#1982512</div>
+                            <div><strong>{locale === 'zh' ? '多签托管代扣流：' : 'Escrow: '}</strong>{datasetBounty} ETH (Paid)</div>
+                          </div>
+                        </div>
+
+                        {/* Reset & Navigation bar */}
+                        <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDefinePath(null);
+                              setFormSubmittingStage('none');
+                              setDraftedProposal(null);
+                            }}
+                            className="flex-1 py-2.5 bg-transparent border border-[#4a3427] text-[#ebdcb9] font-serif font-black text-xs uppercase hover:bg-black/20 rounded transition text-center cursor-pointer"
+                          >
+                            {locale === 'zh' ? '委托另一个数据集算力订单' : 'OUTSOURCE ANOTHER CORPUS'}
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab('Activities');
+                            }}
+                            className="flex-1 py-2.5 bg-[#849c44]/10 text-[#dfab6c] border border-[#849c44]/40 text-xs font-serif font-black uppercase tracking-wider rounded transition flex items-center justify-center gap-2 cursor-pointer hover:bg-[#849c44]/20"
+                          >
+                            <Coins className="w-4.5 h-4.5" />
+                            <span>{locale === 'zh' ? '前往算力对账本' : 'GO TO ESCROW REGISTRY'}</span>
                           </button>
                         </div>
 
@@ -1940,6 +2428,8 @@ export default function App() {
                         task={task}
                         onOpenDetail={() => setSelectedTask(rawTask)}
                         onMine={() => setActiveMineTask(rawTask)}
+                        onCancelWarrant={handleCancelWarrant}
+                        onModifyDemand={handleStartModifyDemand}
                         onValidate={() => {
                           // Check if a submission is available to review
                           if (rawTask.minerSubmissions.length > 0) {
@@ -2090,6 +2580,97 @@ export default function App() {
           />
         );
       })()}
+
+      {/* 5. Modal: Custom Modify Modal */}
+      {modifyingTask && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#eee1c9] border-4 border-[#3e291b] rounded-lg max-w-lg w-full p-6 relative shadow-2xl select-none outline outline-1 outline-offset-4 outline-[#eee1c9]/45">
+            {/* Stamp decoration */}
+            <div className="absolute right-4 top-4 border-2 border-dashed border-[#bf311d]/40 text-[#bf311d]/50 text-[9px] font-mono uppercase tracking-widest font-black px-2 py-0.5 rounded -rotate-6">
+              {locale === 'zh' ? '多签重构' : 'PACT AMEND'}
+            </div>
+
+            <div className="font-serif border-b-2 border-[#543b27]/20 border-dotted pb-3 mb-4 text-center">
+              <h3 className="text-xl font-black text-[#2e1c12] tracking-wider uppercase font-serif">
+                {locale === 'zh' ? '★ 修改算力需求契约 ★' : '★ AMEND COMPUTE WARRANT ★'}
+              </h3>
+              <p className="text-[10px] text-[#8e5c3c] tracking-widest uppercase font-mono mt-1">
+                {locale === 'zh' ? '重置并更新智能托管契约参数' : 're-negotiate smart escrow conditions'}
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveModifiedDemand} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-mono uppercase text-[#5c493c] font-black">
+                  {locale === 'zh' ? '悬赏订单标题 / WARRANT TITLE' : 'Warrant Title'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={modifyTitle}
+                  onChange={(e) => setModifyTitle(e.target.value)}
+                  className="w-full bg-[#faecd1] border-2 border-[#543b27]/40 text-xs text-[#2e1c12] font-mono px-3 py-2 rounded focus:outline-none focus:border-[#a82a18] font-bold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-mono uppercase text-[#5c493c] font-black">
+                  {locale === 'zh' ? '外包技术需求描述 / SPECIFICATION' : 'Warrant Specification'}
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={modifyDescription}
+                  onChange={(e) => setModifyDescription(e.target.value)}
+                  className="w-full bg-[#faecd1] border-2 border-[#543b27]/40 text-xs text-[#2e1c12] font-sans px-3 py-2 rounded focus:outline-none focus:border-[#a82a18] resize-none leading-relaxed font-semibold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-mono uppercase text-[#5c493c] font-black flex justify-between">
+                  <span>{locale === 'zh' ? '悬赏金储备 (ETH) / COGNITIVE ESCROW BOUNTY' : 'Warrant Bounty (ETH)'}</span>
+                  <span className="text-[#a82a18] font-mono font-bold">{locale === 'zh' ? '账户余额: ' : 'Wallet balance: '}{wallet.balance.toFixed(4)} ETH</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0.01"
+                    required
+                    value={modifyBounty}
+                    onChange={(e) => setModifyBounty(e.target.value)}
+                    className="w-full bg-[#faecd1] border-2 border-[#543b27]/40 text-xs text-[#2e1c12] font-mono px-3 py-2 rounded focus:outline-none focus:border-[#a82a18] font-black"
+                  />
+                  <span className="absolute right-3 top-2 text-[10px] font-mono text-[#5c493c] font-bold">ETH</span>
+                </div>
+                <p className="text-[9px] text-[#8e5c3c] font-serif leading-normal mt-1">
+                  {locale === 'zh' 
+                    ? '补充契约预算将会从您的 MetaMask 钱包追加锁存；减少预算时多余的质押金则会实时退款。' 
+                    : 'Increasing will pull extra funds from Metamask; decreasing will refund the difference instantly.'}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-3 border-t-2 border-[#543b27]/20 border-dotted mt-4">
+                <button
+                  type="button"
+                  onClick={() => setModifyingTask(null)}
+                  className="flex-1 py-2 bg-[#eae0cb] hover:bg-[#e1d5bd] text-[#5c493c] font-serif font-black text-[11px] rounded border border-[#bfae94] transition cursor-pointer transition-all duration-200"
+                >
+                  {locale === 'zh' ? '放弃修改' : 'CANCEL AMENDMENT'}
+                </button>
+
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-[#9e331b] hover:bg-[#b03d27] text-[#eee1c9] font-serif font-black text-[11px] rounded shadow-md cursor-pointer transition-all duration-300 border border-[#6e2211]"
+                >
+                  {locale === 'zh' ? '签订并部署更新' : 'SIGN & DEPLOY MOD'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
         </>
       )}

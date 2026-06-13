@@ -61,6 +61,7 @@ export interface Task {
   minerSubmissionsCount: number;
   minerSubmissions: MinerSubmission[];
   assignedAgent?: string;
+  isCreatedByCurrentUser?: boolean;
 }
 
 export interface Activity {
