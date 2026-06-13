@@ -264,9 +264,7 @@ export default function App() {
   const [web3ContractAddr, setWeb3ContractAddr] = useState('');
   const [web3FileScope, setWeb3FileScope] = useState('');
   const [web3Deliverables, setWeb3Deliverables] = useState<string[]>(['Audit Report', 'Patch/Fix suggestion']);
-  const [web3Urgency, setWeb3Urgency] = useState('24 Hours');
   const [web3CustomNotes, setWeb3CustomNotes] = useState('');
-  const [web3Bounty, setWeb3Bounty] = useState('0.150');
   
   // Dataset Miner Form parameters
   const [datasetDomain, setDatasetDomain] = useState('Financial Chain-of-Thought Reasoning');
@@ -275,9 +273,7 @@ export default function App() {
   const [datasetSchema, setDatasetSchema] = useState('JSONL with query key, logical rationale thought-blocks, and verified gold response');
   const [datasetCleaning, setDatasetCleaning] = useState('');
   const [datasetValidationMetric, setDatasetValidationMetric] = useState('diversity-heavy');
-  const [datasetUrgency, setDatasetUrgency] = useState('48 Hours');
   const [datasetCustomNotes, setDatasetCustomNotes] = useState('');
-  const [datasetBounty, setDatasetBounty] = useState('0.180');
 
   // Submit and loading lifecycle parameters
   const [formSubmittingStage, setFormSubmittingStage] = useState<
@@ -429,46 +425,56 @@ export default function App() {
   }, [wallet.address]);
 
   // Automated Web3 Debug Request Form Submission handler
-  const handleWeb3FormSubmit = (e: React.FormEvent) => {
+  const handleWeb3FormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormSubmittingStage('analyzing');
-    
-    setTimeout(() => {
-      const criteriaOption: CriteriaOption = {
-        id: 'web3-debug-custom-' + Date.now(),
-        name: locale === 'zh' ? '沙箱多重重试渗透审计校验机制' : 'Sandboxed VM Anti-Exploit Checkmarks',
-        description: `EVM transaction tracking and trace logs matching algorithm configured specifically for detecting ${web3IssueType} flaws.`,
-        outputRequirements: `Solidity contract patch diff plus a local compilation verification script verifying the bug is neutralized.`,
-        scoringDimensions: [
-          { name: locale === 'zh' ? '漏洞修复彻底程度与边缘阻断 (weight: 50%)' : 'Security Patch Completeness & Edge Blocking', weight: 50 },
-          { name: locale === 'zh' ? '编译器静态兼容性及测试通过率 (weight: 30%)' : 'EVM Sandbox Compilation Status', weight: 30 },
-          { name: locale === 'zh' ? '代码整洁度与反代码粘连考核 (weight: 20%)' : 'Anti-Collusion Structural Compliance', weight: 20 }
-        ],
-        passCondition: 'Audit score >= 75 / 100 in deep sandboxed exploit reproduction loop.',
-        checklist: [
-          `Validate that original ${web3IssueType} reproduction script fails post-patch.`,
-          'Ensure zero compiler state deprecation or warning triggers.',
-          'Verify compliance against security patterns defined in z.ai auditing lexicon.'
-        ],
-        auditPrompt: `Directly assess code for ${web3IssueType} vulnerabilities inside target ${web3VMType} files.`,
-        disputeTrigger: 'Validation deviance score exceeds threshold delta > 15.'
-      };
 
-      setDraftedProposal({
-        type: 'web3',
-        title: locale === 'zh' ? `智能合约 ${web3IssueType} 漏洞排查修复` : `${web3IssueType} Exploit Sandbox Analysis`,
-        description: `Audit target scope: VM/Chain: ${web3VMType}, suspected exploit: ${web3IssueType}. Repository Target: ${web3RepoUrl || 'Direct copy text'}. Suspected Address: ${web3ContractAddr || 'Local workspace'}. Files: ${web3FileScope || 'All elements'}. Deliverable: ${web3Deliverables.join(', ')}. Additional Details: ${web3CustomNotes || 'None'}.`,
-        rewardPool: parseFloat(web3Bounty) || 0.150,
-        depositAmount: parseFloat(web3Bounty) || 0.150,
-        aiThresholdLine: 75,
-        criteriaName: criteriaOption.name,
-        selectedCriteriaOption: criteriaOption,
-        outputFormat: 'Solidity Compiler Patch',
-        rawPromptText: `Debug Contract ${web3IssueType}`
-      });
+    const criteriaOption: CriteriaOption = {
+      id: 'web3-debug-custom-' + Date.now(),
+      name: locale === 'zh' ? '沙箱多重重试渗透审计校验机制' : 'Sandboxed VM Anti-Exploit Checkmarks',
+      description: `EVM transaction tracking and trace logs matching algorithm configured specifically for detecting ${web3IssueType} flaws.`,
+      outputRequirements: `Solidity contract patch diff plus a local compilation verification script verifying the bug is neutralized.`,
+      scoringDimensions: [
+        { name: locale === 'zh' ? '漏洞修复彻底程度与边缘阻断 (weight: 50%)' : 'Security Patch Completeness & Edge Blocking', weight: 50 },
+        { name: locale === 'zh' ? '编译器静态兼容性及测试通过率 (weight: 30%)' : 'EVM Sandbox Compilation Status', weight: 30 },
+        { name: locale === 'zh' ? '代码整洁度与反代码粘连考核 (weight: 20%)' : 'Anti-Collusion Structural Compliance', weight: 20 }
+      ],
+      passCondition: 'Audit score >= 75 / 100 in deep sandboxed exploit reproduction loop.',
+      checklist: [
+        `Validate that original ${web3IssueType} reproduction script fails post-patch.`,
+        'Ensure zero compiler state deprecation or warning triggers.',
+        'Verify compliance against security patterns defined in z.ai auditing lexicon.'
+      ],
+      auditPrompt: `Directly assess code for ${web3IssueType} vulnerabilities inside target ${web3VMType} files.`,
+      disputeTrigger: 'Validation deviance score exceeds threshold delta > 15.'
+    };
 
-      setFormSubmittingStage('proposal_ready');
-    }, 1800);
+    // Call agent intake to get suggested_price
+    let suggestedPrice = 0.15; // fallback default
+    try {
+      const userInput = buildDebugUserInput();
+      const intake = await intakeDebug(userInput);
+      if (intake.suggested_price && intake.suggested_price > 0) {
+        suggestedPrice = intake.suggested_price;
+      }
+    } catch (err) {
+      console.warn('Intake API call failed during form submit, using default price:', err);
+    }
+
+    setDraftedProposal({
+      type: 'web3',
+      title: locale === 'zh' ? `智能合约 ${web3IssueType} 漏洞排查修复` : `${web3IssueType} Exploit Sandbox Analysis`,
+      description: `Audit target scope: VM/Chain: ${web3VMType}, suspected exploit: ${web3IssueType}. Repository Target: ${web3RepoUrl || 'Direct copy text'}. Suspected Address: ${web3ContractAddr || 'Local workspace'}. Files: ${web3FileScope || 'All elements'}. Deliverable: ${web3Deliverables.join(', ')}. Additional Details: ${web3CustomNotes || 'None'}.`,
+      rewardPool: suggestedPrice,
+      depositAmount: suggestedPrice,
+      aiThresholdLine: 75,
+      criteriaName: criteriaOption.name,
+      selectedCriteriaOption: criteriaOption,
+      outputFormat: 'Solidity Compiler Patch',
+      rawPromptText: `Debug Contract ${web3IssueType}`
+    });
+
+    setFormSubmittingStage('proposal_ready');
   };
 
   // Automated Dataset Mining Request Form Submission handler
@@ -501,8 +507,8 @@ export default function App() {
         type: 'dataset',
         title: locale === 'zh' ? `分布式发掘: ${datasetDomain} 算力数据集` : `Dataset Outsource: ${datasetDomain} High Entropy Corpus`,
         description: `Custom data collection contract. Domain target: ${datasetDomain}. Dataset size target: ${datasetSize} elements. Target JSON Schema structure: ${datasetSchema}. Cleaning guidelines: ${datasetCleaning || 'Remove boilerplate/low semantic density'}. Metrics target: ${datasetValidationMetric === 'diversity-heavy' ? 'Maximum unique information density' : 'Rigid accuracy validation'}. Notes: ${datasetCustomNotes || 'None'}.`,
-        rewardPool: parseFloat(datasetBounty) || 0.180,
-        depositAmount: parseFloat(datasetBounty) || 0.180,
+        rewardPool: 0.180,
+        depositAmount: 0.180,
         aiThresholdLine: 72,
         criteriaName: criteriaOption.name,
         selectedCriteriaOption: criteriaOption,
@@ -558,7 +564,7 @@ export default function App() {
     }
 
     const userInput = buildDebugUserInput();
-    const bounty = parseFloat(web3Bounty) || 0.15;
+    const bounty = draftedProposal.rewardPool || 0.15;
 
     console.group('%c🔧 [Agent Flow] handleAgentDeploy', 'color: #dfab6c; font-weight: bold; font-size: 14px');
     console.log('%c📋 userInput:', 'color: #ebdcb9', userInput);
@@ -577,13 +583,8 @@ export default function App() {
     console.log('%c📡 Phase 0: Deploying contract...', 'color: #dfab6c');
     setFormSubmittingStage('deploying_contract');
 
-    // Build contract parameters from form data
-    const SLA_HOURS: Record<string, number> = {
-      '12 Hours': 12 * 3600,
-      '24 Hours': 24 * 3600,
-      '48 Hours': 48 * 3600,
-    };
-    const deadline = Math.floor(Date.now() / 1000) + (SLA_HOURS[web3Urgency] || 24 * 3600);
+    // Default 24-hour SLA deadline
+    const deadline = Math.floor(Date.now() / 1000) + 24 * 3600;
     const criteriaJSON = JSON.stringify({
       task: draftedProposal.title,
       repo: web3RepoUrl,
@@ -1797,42 +1798,6 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Budget & Urgency */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-mono text-[#8e7564] font-black uppercase block">
-                              {locale === 'zh' ? '调试加急周期 (SLA Timeframe)' : 'SLA Target timeframe'}
-                            </label>
-                            <select 
-                              value={web3Urgency}
-                              onChange={(e) => setWeb3Urgency(e.target.value)}
-                              className="w-full h-9 px-2 bg-[#0b0705] border border-[#4a3427] rounded text-xs font-mono text-[#ebdcb9] outline-none focus:border-[#dfab6c]"
-                            >
-                              <option value="12 Hours">12 Hours (特急代扣)</option>
-                              <option value="24 Hours">24 Hours (常规加急)</option>
-                              <option value="48 Hours">48 Hours (标准作业)</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-mono text-[#8e7564] font-black uppercase block">
-                              {locale === 'zh' ? '预设多签托管赏金金额 (Reward ETH)' : 'Pact locked reward pool (ETH)'}
-                            </label>
-                            <div className="relative">
-                              <input 
-                                type="number"
-                                step="0.01"
-                                required
-                                min="0.01"
-                                value={web3Bounty}
-                                onChange={(e) => setWeb3Bounty(e.target.value)}
-                                className="w-full h-9 pl-3 pr-12 bg-[#0b0705] border border-[#4a3427] rounded text-xs text-[#ebdcb9] outline-none focus:border-[#dfab6c]"
-                              />
-                              <span className="absolute right-3 top-2 text-[10px] font-sans font-black text-[#dfab6c]">ETH</span>
-                            </div>
-                          </div>
-                        </div>
-
                         {/* Custom notes */}
                         <div className="space-y-1">
                           <label className="text-[10px] font-mono text-[#8e7564] font-black uppercase block">
@@ -1954,8 +1919,8 @@ export default function App() {
                           </h4>
                           <p className="text-[11px] text-[#8e7564] font-mono">
                             {locale === 'zh'
-                              ? `正在将 ${web3Bounty} ETH 存入智能合约托管池，请在 MetaMask 弹窗中确认交易。`
-                              : `Depositing ${web3Bounty} ETH into the smart contract escrow pool. Please confirm the transaction in MetaMask.`}
+                              ? `正在将 ${draftedProposal?.rewardPool || 0.15} ETH 存入智能合约托管池，请在 MetaMask 弹窗中确认交易。`
+                              : `Depositing ${draftedProposal?.rewardPool || 0.15} ETH into the smart contract escrow pool. Please confirm the transaction in MetaMask.`}
                           </p>
                           <p className="text-[10px] text-[#8e7564]/60 font-mono">
                             {locale === 'zh'
@@ -2062,8 +2027,8 @@ export default function App() {
                                   ? `Aurora Debug Agent 已完成对仓库 ${web3RepoUrl} 的深度诊断。漏洞已复现，补丁已生成并验证。以下是 Agent 执行的真实结果。`
                                   : `Aurora Debug Agent has completed diagnosis of ${web3RepoUrl}. The bug was reproduced, patches were generated and verified. Real execution results are shown below.`)
                                 : (locale === 'zh'
-                                  ? `由于您启用了 Platform Debug Agent 加速机制，系统在代扣划转 ${web3Bounty} ETH 至托管池的同时，智能虚拟机沙盒已提前验证并自主完成了针对 ${web3IssueType} 的全套修复审计。下面是以前述对话阶段整合的代维成果。`
-                                  : `With Platform Debug Agent acceleration engaged, ${web3Bounty} ETH has been successfully escrowed and the sandbox VM has automatically complied, passing 100% of the vulnerability mitigations.`)}
+                                  ? `由于您启用了 Platform Debug Agent 加速机制，系统在代扣划转 ${draftedProposal?.rewardPool || 0.15} ETH 至托管池的同时，智能虚拟机沙盒已提前验证并自主完成了针对 ${web3IssueType} 的全套修复审计。下面是以前述对话阶段整合的代维成果。`
+                                  : `With Platform Debug Agent acceleration engaged, ${draftedProposal?.rewardPool || 0.15} ETH has been successfully escrowed and the sandbox VM has automatically complied, passing 100% of the vulnerability mitigations.`)}
                             </p>
                           </div>
                         </div>
@@ -2343,7 +2308,7 @@ export default function App() {
                               <button
                                 onClick={() => {
                                   // Trigger Report Download
-                                  const markdownText = `# security audit & debugging report\n# platform debug killer - multi-consensus clearance\n# timestamp: ${new Date().toLocaleDateString()}\n\n## 1. codebase target\n- repository: ${web3RepoUrl}\n- VM environment: ${web3VMType}\n- target address: ${web3ContractAddr || 'Not deployed (local sandbox)'}\n\n## 2. vulnerability identification\n- threat category: ${web3IssueType}\n- threat level: CRITICAL RISK\n- audited files: ${web3FileScope || 'all repository source files'}\n\n### findings recap:\nOur platform agents simulated multiple state re-entrancy and access exploit vectors against your provided Solidity/Move specifications. An active vulnerability was replicated successfully in the preliminary compile run.\n\n## 3. automated patch deployment\n- remediation method: Applied strict reentrancy guards, mutex locking variables, and validated address check gates.\n- sandbox compile status: SUCCESS\n- unit test coverage: 100% (all mock attack vectors fully deflected and locked)\n\n## 4. escrow ledger summary\n- reward locked: ${web3Bounty} ETH\n- status: Settled / Escrow Safe Released to Solver Space\n- transaction footprint: 0x${generateHash('tx_')}\n`;
+                                  const markdownText = `# security audit & debugging report\n# platform debug killer - multi-consensus clearance\n# timestamp: ${new Date().toLocaleDateString()}\n\n## 1. codebase target\n- repository: ${web3RepoUrl}\n- VM environment: ${web3VMType}\n- target address: ${web3ContractAddr || 'Not deployed (local sandbox)'}\n\n## 2. vulnerability identification\n- threat category: ${web3IssueType}\n- threat level: CRITICAL RISK\n- audited files: ${web3FileScope || 'all repository source files'}\n\n### findings recap:\nOur platform agents simulated multiple state re-entrancy and access exploit vectors against your provided Solidity/Move specifications. An active vulnerability was replicated successfully in the preliminary compile run.\n\n## 3. automated patch deployment\n- remediation method: Applied strict reentrancy guards, mutex locking variables, and validated address check gates.\n- sandbox compile status: SUCCESS\n- unit test coverage: 100% (all mock attack vectors fully deflected and locked)\n\n## 4. escrow ledger summary\n- reward locked: ${draftedProposal?.rewardPool || 0.15} ETH\n- status: Settled / Escrow Safe Released to Solver Space\n- transaction footprint: 0x${generateHash('tx_')}\n`;
                                   const blob = new Blob([markdownText], { type: 'text/markdown' });
                                   const url = URL.createObjectURL(blob);
                                   const a = document.createElement('a');
@@ -2400,7 +2365,7 @@ export default function App() {
                           <div className="bg-[#150f0c] px-3.5 py-2.5 border border-[#4a3427] rounded text-[10px] font-mono text-[#a58d7c] flex flex-wrap gap-x-6 gap-y-1.5">
                             <div><strong>{locale === 'zh' ? '对账签名：' : 'Sig: '}</strong>0x9dF21...8F10</div>
                             <div><strong>{locale === 'zh' ? '出块高度：' : 'Block: '}</strong>#1982512</div>
-                            <div><strong>{locale === 'zh' ? '托管结算：' : 'Escrow: '}</strong>{web3Bounty} ETH (Paid)</div>
+                            <div><strong>{locale === 'zh' ? '托管结算：' : 'Escrow: '}</strong>{draftedProposal?.rewardPool || 0.15} ETH (Paid)</div>
                           </div>
                         </div>
                         </>
@@ -2587,42 +2552,6 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Budget & Urgency */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-1">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-mono text-[#8e7564] font-black uppercase block">
-                              {locale === 'zh' ? '数据归档加急周期 (SLA)' : 'SLA Target timeframe'}
-                            </label>
-                            <select 
-                              value={datasetUrgency}
-                              onChange={(e) => setDatasetUrgency(e.target.value)}
-                              className="w-full h-9 px-2 bg-[#0b0705] border border-[#4a3427] rounded text-xs font-mono text-[#ebdcb9] outline-none focus:border-[#dfab6c]"
-                            >
-                              <option value="24 Hours">24 Hours (加急发掘)</option>
-                              <option value="48 Hours">48 Hours (常规对账)</option>
-                              <option value="72 Hours">72 Hours (标准清算)</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-mono text-[#8e7564] font-black uppercase block">
-                              {locale === 'zh' ? '预设多签托管代扣赏金 (Reward ETH)' : 'Pact locked reward pool (ETH)'}
-                            </label>
-                            <div className="relative">
-                              <input 
-                                type="number"
-                                step="0.01"
-                                required
-                                min="0.01"
-                                value={datasetBounty}
-                                onChange={(e) => setDatasetBounty(e.target.value)}
-                                className="w-full h-9 pl-3 pr-12 bg-[#0b0705] border border-[#4a3427] rounded text-xs text-[#ebdcb9] outline-none focus:border-[#dfab6c]"
-                              />
-                              <span className="absolute right-3 top-2 text-[10px] font-sans font-black text-[#dfab6c]">ETH</span>
-                            </div>
-                          </div>
-                        </div>
-
                         {/* Custom notes */}
                         <div className="space-y-1">
                           <label className="text-[10px] font-mono text-[#8e7564] font-black uppercase block">
@@ -2746,8 +2675,8 @@ export default function App() {
                             </h4>
                             <p className="text-[11px] text-[#ebdcb9]/80 font-sans leading-relaxed">
                               {locale === 'zh'
-                                ? `由于您启用了 Platform Data Mining Agent 搜集机制，系统在代扣划转 ${datasetBounty} ETH 至托管池的同时，智能数据索引沙盒已提前完成了针对 ${datasetDomain} 的全套语料搜集、质量校正与剔重去噪。下面是以前述对账阶段整合的交付成果。`
-                                : `With Platform Data Mining Agent acceleration engaged, ${datasetBounty} ETH has been successfully escrowed and our mining sandbox has automatically compiled the cleaned corpus for ${datasetDomain}.`}
+                                ? `由于您启用了 Platform Data Mining Agent 搜集机制，系统在代扣划转 ${draftedProposal?.rewardPool || 0.18} ETH 至托管池的同时，智能数据索引沙盒已提前完成了针对 ${datasetDomain} 的全套语料搜集、质量校正与剔重去噪。下面是以前述对账阶段整合的交付成果。`
+                                : `With Platform Data Mining Agent acceleration engaged, ${draftedProposal?.rewardPool || 0.18} ETH has been successfully escrowed and our mining sandbox has automatically compiled the cleaned corpus for ${datasetDomain}.`}
                             </p>
                           </div>
                         </div>
@@ -2772,7 +2701,7 @@ export default function App() {
                                 </div>
                                 <p className="text-[11.5px] font-sans text-[#ebdcb9] leading-relaxed">
                                   {locale === 'zh'
-                                    ? `「尊敬的验证节点，我们对您指定的算力话题 ${datasetDomain} 进行了全方位原始文本遍历捕获。由于在 ${datasetUrgency} 的标准清算期，我们累计排布出高质量推理语料、链上CoT等丰富样本行。现过滤多余低质杂音，移交给清洗模块对齐您指定的评分规则：${draftedProposal?.selectedCriteriaOption?.name || '高密度词流模式'}。」`
+                                    ? `「尊敬的验证节点，我们对您指定的算力话题 ${datasetDomain} 进行了全方位原始文本遍历捕获。在48小时标准清算期内，我们累计排布出高质量推理语料、链上CoT等丰富样本行。现过滤多余低质杂音，移交给清洗模块对齐您指定的评分规则：${draftedProposal?.selectedCriteriaOption?.name || '高密度词流模式'}。」`
                                     : `"Greetings. I have traversed public networks and indexed corpus regarding ${datasetDomain}. Filtered low-semantic text slices. Handing over for strict schema validation structure under ${draftedProposal?.selectedCriteriaOption?.name || 'High Entropy Rubric'}"`}
                                 </p>
                               </div>
@@ -2828,7 +2757,7 @@ export default function App() {
                               <button
                                 onClick={() => {
                                   // Trigger Report Download
-                                  const markdownText = `# high entropy dataset curation & curation report\n# platform data mining agent\n# timestamp: ${new Date().toLocaleDateString()}\n\n## 1. target topic\n- domain label: ${datasetDomain}\n- expected size: ${datasetSize} items\n- scheme rules: ${datasetSchema}\n\n## 2. cleaning & curation stats\n- target semantic records: ${datasetSize}\n- duplicate elements suppressed: 1,492\n- structure check syntax: 100% compliant JSON Lines\n- scoring benchmark: 100/100 (excellence metric)\n\n## 3. contract ledger\n- budget locked: ${datasetBounty} ETH\n- transaction signature: 0x${generateHash('tx_')}\n`;
+                                  const markdownText = `# high entropy dataset curation & curation report\n# platform data mining agent\n# timestamp: ${new Date().toLocaleDateString()}\n\n## 1. target topic\n- domain label: ${datasetDomain}\n- expected size: ${datasetSize} items\n- scheme rules: ${datasetSchema}\n\n## 2. cleaning & curation stats\n- target semantic records: ${datasetSize}\n- duplicate elements suppressed: 1,492\n- structure check syntax: 100% compliant JSON Lines\n- scoring benchmark: 100/100 (excellence metric)\n\n## 3. contract ledger\n- budget locked: ${draftedProposal?.rewardPool || 0.18} ETH\n- transaction signature: 0x${generateHash('tx_')}\n`;
                                   const blob = new Blob([markdownText], { type: 'text/markdown' });
                                   const url = URL.createObjectURL(blob);
                                   const a = document.createElement('a');
@@ -2885,7 +2814,7 @@ export default function App() {
                           <div className="bg-[#150f0c] px-3.5 py-2.5 border border-[#4a3427] rounded text-[10px] font-mono text-[#a58d7c] flex flex-wrap gap-x-6 gap-y-1.5">
                             <div><strong>{locale === 'zh' ? '对账物理哈希：' : 'Sig: '}</strong>0x8eB17...4C21</div>
                             <div><strong>{locale === 'zh' ? '块高度：' : 'Block: '}</strong>#1982512</div>
-                            <div><strong>{locale === 'zh' ? '多签托管代扣流：' : 'Escrow: '}</strong>{datasetBounty} ETH (Paid)</div>
+                            <div><strong>{locale === 'zh' ? '多签托管代扣流：' : 'Escrow: '}</strong>{draftedProposal?.rewardPool || 0.18} ETH (Paid)</div>
                           </div>
                         </div>
 
