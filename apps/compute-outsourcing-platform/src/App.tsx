@@ -85,8 +85,21 @@ const SPEC_PRIMARY_OPTION_IDS = new Set([
   'char-correctness',
   'default-coherence'
 ]);
+const SPEC_TASK_DEMO_REWARD_ETH = 0.01;
 
 const isPrimarySpecOption = (option: CriteriaOption) => SPEC_PRIMARY_OPTION_IDS.has(option.id);
+const getSpecAgentResponseDelay = () => 1700 + Math.floor(Math.random() * 700);
+
+type SpecStrategyQuestion = {
+  id: 'time-window' | 'validation-mix' | 'reward-split';
+  question: string;
+  whyItMatters: string;
+  options: Array<{
+    id: string;
+    label: string;
+    description: string;
+  }>;
+};
 
 const getSpecCriteriaOptionDisplay = (option: CriteriaOption, locale: 'en' | 'zh'): CriteriaOption => {
   const isPrimary = isPrimarySpecOption(option);
@@ -274,6 +287,7 @@ export default function App() {
     text: string;
     criteriaOptions?: CriteriaOption[];
     selectedOptionId?: string;
+    specStrategyQuestion?: SpecStrategyQuestion;
     orderPreview?: {
       summary: string;
       deposit: number;
@@ -283,8 +297,10 @@ export default function App() {
     };
   }>>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [stage, setStage] = useState<'prompt' | 'options' | 'pact_ready' | 'deployed'>('prompt');
+  const [stage, setStage] = useState<'prompt' | 'options' | 'time_window' | 'validation_mix' | 'reward_split' | 'pact_ready' | 'deployed'>('prompt');
   const [tempCreatedTask, setTempCreatedTask] = useState<any>(null);
+  const [selectedSpecCriteria, setSelectedSpecCriteria] = useState<CriteriaOption | null>(null);
+  const [specStrategySelections, setSpecStrategySelections] = useState<Record<string, string>>({});
 
   // Custom Form & Path choice states
   const [definePath, setDefinePath] = useState<'web3' | 'dataset' | 'custom' | null>(null);
@@ -936,6 +952,103 @@ export default function App() {
     }, 1200);
   };
 
+  const buildSpecOrderPreview = (option: CriteriaOption) => {
+    const displayOption = getSpecCriteriaOptionDisplay(option, locale);
+    const reward = SPEC_TASK_DEMO_REWARD_ETH;
+    const deposit = SPEC_TASK_DEMO_REWARD_ETH;
+    const passScore = isPrimarySpecOption(option) ? 80 : 72;
+
+    const enAgentText = `Excellent choice. I compiled your request into a ready-to-sign Smart Contract Computation Order with budget deposit requirements. Review the Pact and sign to deploy the task on-chain:`;
+    const zhAgentText = `明智的选择。我已经将您的需求集成一份已就绪的“多签智能合约计算订单”，该订单附带了预算托管代扣要求。请预览契约详情，然后签名将其安全上链发布：`;
+
+    const enSumText = "Generate custom data complying with chosen metrics. Miner submissions are scored by the selected AI / human validation strategy.";
+    const zhSumText = "生成符合指定数据规范的高质量算力数据集。miner 提交会按刚才选择的 AI / 人工 validator 策略共同打分。";
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        sender: 'agent',
+        text: locale === 'zh' ? zhAgentText : enAgentText,
+        orderPreview: {
+          summary: locale === 'zh' ? zhSumText : enSumText,
+          deposit,
+          reward,
+          passScore,
+          options: displayOption
+        }
+      }
+    ]);
+
+    const mockDepl = {
+      title: `Decentralized Outsourcing Task #${tasks.length + 1}`,
+      description: `Natural language query defined: "${chatMessages[0]?.text || 'Outsource task computation'}"`,
+      rewardPool: reward,
+      depositAmount: deposit,
+      aiThresholdLine: passScore,
+      criteriaName: displayOption.name,
+      selectedCriteriaOption: displayOption,
+      outputFormat: displayOption.outputRequirements.split(' ')[0] || 'JSONL',
+      rawPromptText: chatMessages[0]?.text || ''
+    };
+
+    setTempCreatedTask(mockDepl);
+    setStage('pact_ready');
+    setIsTyping(false);
+  };
+
+  const getTimeWindowQuestion = (): SpecStrategyQuestion => ({
+    id: 'time-window',
+    question: locale === 'zh' ? '你希望任务验收时间窗口设置为多久？' : 'What validation time window do you prefer?',
+    whyItMatters: locale === 'zh'
+      ? '时间窗口决定 miner 可以提交结果的最长周期，也会影响 validator 开始打分的时间点。窗口越短，任务结算越快；窗口越长，miner 有更多时间提交、修正和补充证据。'
+      : 'The time window controls how long miners can submit outputs before validators begin scoring. A shorter window settles faster; a longer window gives miners more room to refine work and attach evidence.',
+    options: locale === 'zh'
+      ? [
+          { id: '12h', label: '12h', description: '适合快速演示和轻量任务。miner 需要在短时间内提交结果，平台会尽快进入验证与结算阶段，整体节奏最紧凑。' },
+          { id: '24h', label: '24h', description: '适合大多数标准任务。给 miner 一天时间完成提交，同时仍然保持比较清晰的展示节奏和可控等待时间。' },
+          { id: '48h', label: '48h', description: '适合更复杂或需要查证的任务。miner 有更充足的提交窗口，可以补充日志、证据链和边界样例。' }
+        ]
+      : [
+          { id: '12h', label: '12h', description: 'Best for fast demos and lightweight tasks. Miners submit quickly, and the platform can move into validation and settlement with the tightest cadence.' },
+          { id: '24h', label: '24h', description: 'A balanced default for standard tasks. Miners get a full day to submit while the demo still keeps a predictable pace.' },
+          { id: '48h', label: '48h', description: 'Best for more complex tasks that need evidence, logs, edge cases, or a longer submission window before validation starts.' }
+        ]
+  });
+
+  const getValidationMixQuestion = (): SpecStrategyQuestion => ({
+    id: 'validation-mix',
+    question: locale === 'zh' ? '你希望 AI validation 和人工 validation 的占比是多少？' : 'What AI vs human validation mix do you prefer?',
+    whyItMatters: locale === 'zh'
+      ? 'AI validation 可以快速检查格式、解析和可复现规则；人工 validation 更适合处理模糊边界、主观质量和争议样例。这里选择的是前端展示中的评分权重偏好。'
+      : 'AI validation is faster for format, parsing, and reproducibility checks; human validation is better for ambiguous edge cases, subjective quality, and disputes. This is the displayed scoring preference.',
+    options: locale === 'zh'
+      ? [
+          { id: 'ai-heavy', label: 'AI 70% / 人工 30%', description: '偏自动化，适合格式、解析、边界稳定性这类可机器化验收。AI 先给出主要评分，人工 validator 负责抽查和处理异常。' },
+          { id: 'balanced', label: 'AI 50% / 人工 50%', description: '更均衡，适合结果质量不完全能被规则覆盖的任务。人工复核会参与更多边界样例、争议样例和最终判断。' }
+        ]
+      : [
+          { id: 'ai-heavy', label: 'AI 70% / Human 30%', description: 'Automation-heavy, suitable for format, parsing, and boundary stability checks. AI produces the main score while human validators review exceptions.' },
+          { id: 'balanced', label: 'AI 50% / Human 50%', description: 'Balanced review for tasks where quality cannot be fully captured by rules. Human validators weigh in on edge cases, disputes, and final judgment.' }
+        ]
+  });
+
+  const getRewardSplitQuestion = (): SpecStrategyQuestion => ({
+    id: 'reward-split',
+    question: locale === 'zh' ? 'Reward 应该给最高分 miner，还是前三名按比例分配？' : 'Should the reward go to the top miner or be split among the top three?',
+    whyItMatters: locale === 'zh'
+      ? 'Reward 分配方式会影响 miner 的参与策略。赢家通吃会强化第一名竞争；前三按比例分配会让更多高质量提交获得回报，适合希望形成开放市场竞争的任务。'
+      : 'Reward distribution changes miner incentives. Winner-takes-all sharpens competition for first place; top-three proportional rewards encourage more high-quality submissions.',
+    options: locale === 'zh'
+      ? [
+          { id: 'winner-takes-all', label: '最高分独享', description: '最终得分最高的 miner 获得全部可分配 reward。这个模式更像竞技场，激励所有提交者冲击最高分。' },
+          { id: 'top-three-proportional', label: '前三按比例', description: '前三名 miner 按验证得分比例分享 reward。这个模式更适合开放市场，鼓励多个优秀结果同时出现。' }
+        ]
+      : [
+          { id: 'winner-takes-all', label: 'Top miner only', description: 'The highest-scoring miner receives the full distributable reward. This feels more like a tournament and pushes every miner toward first place.' },
+          { id: 'top-three-proportional', label: 'Top three split', description: 'The top three miners share the reward proportionally by validation score. This is better for open-market participation and multiple strong outputs.' }
+        ]
+  });
+
   // User selects an option inside conversational cards
   const handleSelectCriteriaOption = (option: CriteriaOption) => {
     // 1. Log select action in chat
@@ -957,51 +1070,81 @@ export default function App() {
       { sender: 'user', text: locale === 'zh' ? zhMeSelect : enMeSelect }
     ]);
 
+    setSelectedSpecCriteria(option);
+    setSpecStrategySelections({});
     setIsTyping(true);
-    setStage('pact_ready');
+    setStage('time_window');
 
-    // 2. Build computation order preview
     setTimeout(() => {
-      const reward = 0.120;
-      const deposit = 0.120;
-      const passScore = isPrimarySpecOption(option) ? 80 : 72;
-
-      const enAgentText = `Excellent choice. I compiled your request into a ready-to-sign Smart Contract Computation Order with budget deposit requirements. Review the Pact and sign to deploy the task on-chain:`;
-      const zhAgentText = `明智的选择。我已经将您的需求集成一份已就绪的“多签智能合约计算订单”，该订单附带了预算托管代扣要求。请预览契约详情，然后签名将其安全上链发布：`;
-
-      const enSumText = "Generate custom data complying with chosen metrics. All worker outputs audited dynamically.";
-      const zhSumText = "生成符合指定数据规范的高质量算力数据集。所有矿工节点成果通过独立 AI 动态审计校验。";
-
       setChatMessages((prev) => [
         ...prev,
         {
           sender: 'agent',
-          text: locale === 'zh' ? zhAgentText : enAgentText,
-          orderPreview: {
-            summary: locale === 'zh' ? zhSumText : enSumText,
-            deposit,
-            reward,
-            passScore,
-            options: displayOption
-          }
+          text: locale === 'zh'
+            ? '好的。在生成计算订单前，还需要确认任务窗口与验证策略。'
+            : 'Great. Before I generate the computation order, please confirm the task window and validation strategy.',
+          specStrategyQuestion: getTimeWindowQuestion()
         }
       ]);
-
-      const mockDepl = {
-        title: `Decentralized Outsourcing Task #${tasks.length + 1}`,
-        description: `Natural language query defined: "${chatMessages[0]?.text || 'Outsource task computation'}"`,
-        rewardPool: reward,
-        depositAmount: deposit,
-        aiThresholdLine: passScore,
-        criteriaName: displayOption.name,
-        selectedCriteriaOption: displayOption,
-        outputFormat: displayOption.outputRequirements.split(' ')[0] || 'JSONL',
-        rawPromptText: chatMessages[0]?.text || ''
-      };
-
-      setTempCreatedTask(mockDepl);
       setIsTyping(false);
-    }, 1000);
+    }, getSpecAgentResponseDelay());
+  };
+
+  const handleSelectSpecStrategyOption = (question: SpecStrategyQuestion, option: SpecStrategyQuestion['options'][number]) => {
+    if (isTyping || !selectedSpecCriteria) return;
+
+    setSpecStrategySelections((prev) => ({ ...prev, [question.id]: option.id }));
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        sender: 'user',
+        text: locale === 'zh'
+          ? `${question.question} ${option.label}`
+          : `${question.question} ${option.label}`
+      }
+    ]);
+    setIsTyping(true);
+
+    if (question.id === 'time-window') {
+      setStage('validation_mix');
+      setTimeout(() => {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            sender: 'agent',
+            text: locale === 'zh'
+              ? '收到。再确认 AI validation 与人工 validation 的评分占比。'
+              : 'Understood. Now confirm the scoring mix between AI validation and human validation.',
+            specStrategyQuestion: getValidationMixQuestion()
+          }
+        ]);
+        setIsTyping(false);
+      }, getSpecAgentResponseDelay());
+      return;
+    }
+
+    if (question.id === 'validation-mix') {
+      setStage('reward_split');
+      setTimeout(() => {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            sender: 'agent',
+            text: locale === 'zh'
+              ? '收到。最后确认 reward 分配规则。'
+              : 'Understood. Finally, confirm the reward distribution rule.',
+            specStrategyQuestion: getRewardSplitQuestion()
+          }
+        ]);
+        setIsTyping(false);
+      }, getSpecAgentResponseDelay());
+      return;
+    }
+
+    setStage('pact_ready');
+    setTimeout(() => {
+      buildSpecOrderPreview(selectedSpecCriteria);
+    }, getSpecAgentResponseDelay());
   };
 
   // User clicks "Secure Deposit & Create Task"
@@ -1063,7 +1206,7 @@ export default function App() {
         isCreatedByCurrentUser: true
       };
 
-      // Add to main catalogs
+      // Add to main catalogs and charge the approved TaskSpec deposit.
       setTasks((prev) => [newlyDeployed, ...prev]);
       wallet.balance -= tempCreatedTask.depositAmount;
 
@@ -3061,6 +3204,48 @@ export default function App() {
                                       </div>
                                     );
                                   })}
+                                </div>
+                              )}
+
+                              {/* Validator strategy choices */}
+                              {msg.specStrategyQuestion && (
+                                <div className="bg-[#0b0705] border border-[#4a3427] rounded p-3.5 space-y-3 pt-3.5 min-w-[min(560px,72vw)]">
+                                  <div>
+                                    <h4 className="font-serif font-black text-xs text-[#ebdcb9] leading-relaxed">
+                                      {msg.specStrategyQuestion.question}
+                                    </h4>
+                                    <p className="text-[10px] text-[#a58d7c] font-mono leading-relaxed mt-1">
+                                      {msg.specStrategyQuestion.whyItMatters}
+                                    </p>
+                                  </div>
+
+                                  <div className={`grid grid-cols-1 gap-3 ${msg.specStrategyQuestion.options.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+                                    {msg.specStrategyQuestion.options.map((option) => {
+                                      const isSelected = specStrategySelections[msg.specStrategyQuestion.id] === option.id;
+                                      const isActive = (msg.specStrategyQuestion.id === 'time-window' && stage === 'time_window') || (msg.specStrategyQuestion.id === 'validation-mix' && stage === 'validation_mix') || (msg.specStrategyQuestion.id === 'reward-split' && stage === 'reward_split');
+                                      return (
+                                        <button
+                                          key={option.id}
+                                          type="button"
+                                          disabled={!isActive || isTyping}
+                                          onClick={() => handleSelectSpecStrategyOption(msg.specStrategyQuestion!, option)}
+                                          className={`text-left rounded border p-3.5 min-h-[132px] flex flex-col justify-between transition ${
+                                            isSelected
+                                              ? 'bg-[#dfab6c]/10 border-[#dfab6c]/60 text-[#ebdcb9]'
+                                              : isActive && !isTyping
+                                                ? 'bg-[#150f0c] border-[#4a3427] hover:border-[#dfab6c]/60 text-[#ebdcb9] cursor-pointer'
+                                                : 'bg-[#150f0c] border-[#4a3427]/40 text-[#6f5849] cursor-not-allowed'
+                                          }`}
+                                        >
+                                          <div className="flex items-center justify-between gap-2">
+                                            <span className="font-mono font-bold text-[11px]">{option.label}</span>
+                                            {isSelected && <Check className="w-3.5 h-3.5 text-[#dfab6c] shrink-0" />}
+                                          </div>
+                                          <p className="text-[10px] text-[#a58d7c] leading-relaxed mt-2">{option.description}</p>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
                               )}
 
