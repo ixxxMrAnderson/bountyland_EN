@@ -8,7 +8,7 @@
     "dev:api": "node apps/api/src/server.js",
     "dev:mock": "node apps/mock-agent/server.js",
     "dev:fancy": "npm --prefix apps/compute-outsourcing-platform run dev",
-    "check": "node --check apps/api/src/server.js && node --check apps/mock-agent/server.js && node --check 'api/[...path].js' && node --check tools/dev.js && node --check scripts/deploy-sepolia.cjs && npm run check:secrets",
+    "check": "node --check apps/api/src/server.js && node --check apps/mock-agent/server.js && node --check apps/mock-agent/vercelHandler.js && node --check api/health.js && node --check api/v1/intake.js && node --check api/v1/execute.js && node --check api/v1/artifacts/download.js && node --check api/v1/human-market/spec.js && node --check tools/dev.js && node --check scripts/deploy-sepolia.cjs && npm run check:secrets",
     "check:secrets": "node scripts/check-secrets.cjs",
     "contracts:compile": "hardhat compile",
     "contracts:test": "hardhat test",
