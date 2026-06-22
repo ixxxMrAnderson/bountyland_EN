@@ -251,13 +251,13 @@ Copy `.env.example` to `.env`:
 cp .env.example .env
 ```
 
-Required values:
+Optional values for real on-chain development:
 
 ```env
-SEPOLIA_RPC_URL=https://...
-SEPOLIA_PRIVATE_KEY=0x...
-RESULT_ORACLE_ADDRESS=0x...
-RESULT_ORACLE_PRIVATE_KEY=0x...
+SEPOLIA_RPC_URL=
+SEPOLIA_PRIVATE_KEY=
+RESULT_ORACLE_ADDRESS=
+RESULT_ORACLE_PRIVATE_KEY=
 MIN_WORKER_STAKE_WEI=1000000000000000
 MIN_VALIDATOR_STAKE_WEI=5000000000000000
 ```
@@ -294,7 +294,18 @@ Default URL:
 http://localhost:3000
 ```
 
-### 5. Start Agent Core
+### 5. Start the Keyless Mock Agent
+
+The public demo should use the deterministic mock backend. It does not call
+Z.AI, clone repositories, execute submitted commands, or require any secret:
+
+```bash
+npm run dev:mock
+```
+
+The Vite development proxy sends `/api/*` to this service on port `8791`.
+
+### 6. Optional: Start the Real Agent Core
 
 Use a dedicated Python environment:
 
@@ -310,10 +321,10 @@ Configure Z.AI:
 cp .env.example .env
 ```
 
-Recommended values for `aurora-agent-core/.env`:
+Real-agent values belong only in the ignored `aurora-agent-core/.env` file:
 
 ```env
-ZAI_API_KEY=your_zai_key
+ZAI_API_KEY=
 AURORA_MODEL=glm-5.1
 AURORA_BASE_URL=https://api.z.ai/api/paas/v4/
 ```
@@ -329,6 +340,27 @@ Default URL:
 ```text
 http://127.0.0.1:8791
 ```
+
+## Free Demo Deployment
+
+The repository includes a Vercel configuration that deploys the Vite frontend
+and the mock agent API together:
+
+1. Import this GitHub repository into Vercel.
+2. Keep the repository root as the project root.
+3. Do not add `ZAI_API_KEY`, wallet private keys, or RPC secrets.
+4. Deploy. `vercel.json` builds the frontend and exposes the mock under `/api`.
+
+For a hackathon or personal demo this can fit within Vercel's Hobby tier. The
+mock keeps no database state and makes no paid external API calls.
+
+Before every push, run:
+
+```bash
+npm run check:secrets
+```
+
+GitHub Actions runs the same check for pushes and pull requests.
 
 ## API Reference
 

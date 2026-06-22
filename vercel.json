@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm ci --prefix apps/compute-outsourcing-platform && npm run build --prefix apps/compute-outsourcing-platform",
+  "outputDirectory": "apps/compute-outsourcing-platform/dist"
+}

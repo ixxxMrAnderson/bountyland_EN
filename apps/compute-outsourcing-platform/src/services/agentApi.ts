@@ -3,7 +3,7 @@
 // Dev: Vite proxy /api → http://127.0.0.1:8791
 // ============================================================================
 
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_AGENT_API_BASE || '/api').replace(/\/$/, '');
 
 // ---------------------------------------------------------------------------
 // Response types
